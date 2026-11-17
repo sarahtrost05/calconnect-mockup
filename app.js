@@ -57,7 +57,8 @@
       const tab = a.dataset.tab;
       a.classList.toggle("is-active", tab === screen || (tab === "group" && screen === "chat"));
     });
-    document.querySelector(".tab-bar").hidden = screen === "onboarding";
+    // Like most iPhone chat apps, the chat hides the tab bar to make room for the keyboard.
+    document.querySelector(".tab-bar").hidden = screen === "onboarding" || screen === "chat";
     document.getElementById("skip-notice").hidden = !state.skipped;
     screenArea.scrollTop = 0;
 
@@ -65,6 +66,7 @@
     if (screen === "onboarding") renderOnboarding();
     else phone.dataset.top = "app";
     if (screen === "group") renderGroup();
+    if (screen === "chat") { chatHeader(); renderChat(); }
   }
 
   // ---------- Onboarding rendering ----------
@@ -520,6 +522,150 @@
   groupRoot.addEventListener("click", onGroupClick);
   overlayRoot.addEventListener("click", onGroupClick);
 
+  // ---------- Group chat ----------
+  const C = DATA.chat;
+  const chatEls = {
+    messages: document.getElementById("chat-messages"),
+    form: document.getElementById("composer"),
+    input: document.getElementById("composer-input"),
+    chip: document.getElementById("prompt-chip"),
+  };
+  // In the demo, the member who passes never shows up in the chat.
+  const chatMembers = G.members.filter(m => !m.willDecline);
+  const memberById = Object.fromEntries(G.members.map(m => [m.id, m]));
+  let chat = freshChat();
+
+  function freshChat() {
+    return { messages: C.seed.map(m => ({ ...m })), pending: [], typing: null, timers: [], askedIdeas: false, smallTalkIndex: 0 };
+  }
+
+  const escapeHtml = str => str.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // Show "@AI" mentions in bold, keep line breaks.
+  const formatText = str => escapeHtml(str).replace(/@AI\b/gi, '<strong class="mention">@AI</strong>').replace(/\n/g, "<br>");
+
+  function chatHeader() {
+    document.getElementById("chat-name").textContent = G.name;
+    document.getElementById("chat-sub").textContent = `${chatMembers.length} members + CalConnect AI`;
+    document.getElementById("chat-avatars").innerHTML = chatMembers.map(m =>
+      `<span class="avatar avatar--xs" style="background:${m.color}">${m.name[0]}</span>`).join("");
+  }
+
+  function senderBlock(msg) {
+    if (msg.from === "ai") {
+      return `<div class="msg__sender">CalConnect AI <span class="ai-badge">AI</span></div>`;
+    }
+    return `<div class="msg__sender">${memberById[msg.from].name}</div>`;
+  }
+
+  function avatarFor(from) {
+    if (from === "ai") return `<div class="app-icon app-icon--xs" aria-hidden="true">${APP_ICON}</div>`;
+    const m = memberById[from];
+    return `<div class="avatar avatar--sm" style="background:${m.color}" aria-hidden="true">${m.name[0]}</div>`;
+  }
+
+  function ideasCard(ideas) {
+    return `
+      <div class="ideas">
+        ${ideas.map((idea, i) => `
+          <div class="idea">
+            <span class="idea__num">${i + 1}</span>
+            <div>
+              <strong>${idea.title}</strong>
+              <span>${idea.place} · ${idea.when}</span>
+              <span>${idea.cost}${idea.deal ? ` · <em class="deal">${idea.deal}</em>` : ""}</span>
+            </div>
+          </div>`).join("")}
+        <a class="btn btn--gold btn--sm" href="#activities">See ideas and vote</a>
+      </div>`;
+  }
+
+  function renderChat() {
+    const list = [...chat.messages];
+    if (chat.typing) list.push({ from: chat.typing, typing: true });
+
+    chatEls.messages.innerHTML = list.map((msg, i) => {
+      const prev = list[i - 1];
+      const next = list[i + 1];
+      const firstInRun = !prev || prev.from !== msg.from || msg.time;
+      const lastInRun = !next || next.from !== msg.from || next.time;
+      const mine = memberById[msg.from] && memberById[msg.from].you;
+      const kind = msg.from === "ai" ? "ai" : mine ? "me" : "them";
+
+      const body = msg.typing
+        ? `<div class="bubble bubble--typing" aria-label="typing"><span></span><span></span><span></span></div>`
+        : `<div class="bubble">${formatText(msg.text)}${msg.ideas ? ideasCard(msg.ideas) : ""}${msg.followUp ? `<p class="bubble__follow">${msg.followUp}</p>` : ""}</div>`;
+
+      return `
+        ${msg.time ? `<div class="msg-time">${msg.time}</div>` : ""}
+        <div class="msg msg--${kind} ${firstInRun ? "is-first" : ""} ${lastInRun ? "is-last" : ""}">
+          ${kind !== "me" ? `<div class="msg__avatar">${lastInRun ? avatarFor(msg.from) : ""}</div>` : ""}
+          <div class="msg__col">
+            ${kind !== "me" && firstInRun ? senderBlock(msg) : ""}
+            ${body}
+          </div>
+        </div>`;
+    }).join("");
+
+    chatEls.chip.textContent = C.suggestedPrompt;
+    chatEls.chip.hidden = chat.askedIdeas;
+    chatEls.messages.scrollTop = chatEls.messages.scrollHeight;
+  }
+
+  // Someone "types" for a moment, then their message appears.
+  function queueMessage(msg, delay) {
+    chat.pending.push(msg);
+    chat.timers.push(setTimeout(() => { chat.typing = msg.from; renderChat(); }, delay));
+    chat.timers.push(setTimeout(() => {
+      chat.typing = null;
+      chat.messages.push(chat.pending.shift());
+      renderChat();
+    }, delay + (msg.from === "ai" ? 1400 : 1000)));
+    return delay + (msg.from === "ai" ? 1400 : 1000);
+  }
+
+  function sendMessage(text) {
+    text = text.trim();
+    if (!text) return;
+    chat.messages.push({ from: me.id, text });
+    chatEls.input.value = "";
+    renderChat();
+
+    if (/@ai\b/i.test(text)) {
+      if (/idea|saturday|weekend|plan|do\b|hang/i.test(text)) {
+        chat.askedIdeas = true;
+        let t = queueMessage({ from: "ai", ...C.ideasReply }, 300);
+        C.reactions.forEach(r => { t = queueMessage({ ...r }, t + 500); });
+      } else {
+        queueMessage({ from: "ai", text: C.otherReply }, 300);
+      }
+    } else {
+      const reply = C.smallTalk[chat.smallTalkIndex++ % C.smallTalk.length];
+      queueMessage({ ...reply }, 500);
+    }
+  }
+
+  // Tapping the suggestion "types" it into the box, like a student would.
+  function typeSuggestion() {
+    const text = C.suggestedPrompt;
+    chatEls.input.value = "";
+    chatEls.input.focus();
+    [...text].forEach((ch, i) => {
+      chat.timers.push(setTimeout(() => { chatEls.input.value += ch; }, 35 * i));
+    });
+  }
+
+  function finishChatTimers() {
+    // Leaving mid-conversation: post any replies still on their way right away.
+    chat.timers.forEach(clearTimeout);
+    chat.timers = [];
+    chat.typing = null;
+    chat.messages.push(...chat.pending);
+    chat.pending = [];
+  }
+
+  chatEls.form.addEventListener("submit", e => { e.preventDefault(); sendMessage(chatEls.input.value); });
+  chatEls.chip.addEventListener("click", typeSuggestion);
+
   // ---------- Global ----------
   document.addEventListener("click", e => {
     if (e.target.closest("[data-action='retake']")) {
@@ -532,6 +678,8 @@
     Object.assign(state, freshState(), { installing: false });
     group.timers.forEach(clearTimeout);
     group = freshGroup();
+    chat.timers.forEach(clearTimeout);
+    chat = freshChat();
     if (location.hash === "#onboarding") route(); else location.hash = "#onboarding";
   });
 
@@ -546,6 +694,7 @@
       state.installing = false;
     }
     if (currentScreen() !== "group") finishGroupTimers();
+    if (currentScreen() !== "chat") finishChatTimers();
     route();
   });
   route();

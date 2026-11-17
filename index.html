@@ -63,13 +63,28 @@
         <div id="group-root" class="group"></div>
       </section>
 
-      <section class="screen" data-screen="chat" aria-label="Group chat">
-        <header class="app-header"><h1>Group chat</h1></header>
-        <div class="placeholder">
-          <span class="placeholder__tag">Coming soon</span>
-          <h2>Group chat</h2>
-          <p>AI intro message and @AI replies, always labeled as AI.</p>
-          <div class="placeholder__links"><a class="btn btn--primary" href="#activities">See activity ideas</a></div>
+      <!-- Group chat: messages rendered by app.js -->
+      <section class="screen chat" data-screen="chat" aria-label="Group chat">
+        <header class="chat__header">
+          <a class="chat__back" href="#group" aria-label="Back to your group">‹</a>
+          <div class="chat__title">
+            <div class="avatar-stack" id="chat-avatars" aria-hidden="true"></div>
+            <strong id="chat-name"></strong>
+            <span id="chat-sub"></span>
+          </div>
+          <a class="chat__action" href="#activities" aria-label="Activity ideas">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+          </a>
+        </header>
+        <div class="chat__messages" id="chat-messages" aria-live="polite"></div>
+        <div class="chat__bottom">
+          <button type="button" class="prompt-chip" id="prompt-chip"></button>
+          <form class="composer" id="composer">
+            <input id="composer-input" type="text" autocomplete="off" placeholder="Message · type @AI for ideas" aria-label="Message">
+            <button type="submit" class="composer__send" aria-label="Send">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12"/><path d="M12 17V7M7.5 11.5 12 7l4.5 4.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </form>
         </div>
       </section>
 

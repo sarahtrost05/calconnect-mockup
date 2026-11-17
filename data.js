@@ -103,6 +103,41 @@ window.CC_DATA = {
     ],
   },
 
+  // Screen: Group chat. "from" is a member id or "ai".
+  chat: {
+    seed: [
+      { from: "ai", time: "Today 6:02 PM", text: "Hey Alex, Maya, Jordan and Priya 👋 I'm the CalConnect AI. You were matched because you all love hiking and cafés, and you're all free Thursday evenings and Saturday mornings.\n\nQuick icebreaker: what's your favorite spot on campus so far?\n\nTag @AI anytime for ideas. I'll suggest things, you all decide." },
+      { from: "maya", text: "Hi everyone! Mine is the top of the Campanile at sunset 🌅" },
+      { from: "jordan", text: "Hey! Just transferred from LA. Still looking for good coffee near campus 😅 @AI any tips?" },
+      { from: "ai", text: "Good question, Jordan! Try Strada ☕ It's right by campus and the patio is great for hanging out. If you want somewhere quieter to study, Edmonds is a nice pick too." },
+      { from: "priya", text: "+1 for Strada, their mocha is so good" },
+      { from: "priya", text: "Anyone free this weekend?" },
+      { from: "maya", text: "Saturday morning works for me!" },
+    ],
+    suggestedPrompt: "@AI ideas for Saturday?",
+    // AI reply to a question about Saturday / ideas / the weekend.
+    ideasReply: {
+      text: "Saturday morning works for all 4 of you 🙌 Here are 2 ideas that stay under $10:",
+      ideas: [
+        { title: "Hike to Inspiration Point", place: "Tilden Regional Park", when: "Sat 9:30 AM", cost: "Free · carpool $3 each", deal: null },
+        { title: "Farmers' market + brunch", place: "Downtown Berkeley", when: "Sat 10:00 AM", cost: "$9 each", deal: "15% off with 4+" },
+      ],
+      followUp: "Want me to start a vote?",
+    },
+    otherReply: "I'm best at hangout ideas, finding a time that works for everyone and splitting costs. Try \"@AI ideas for Saturday?\" 🙂",
+    // Group members chiming in after the AI's ideas.
+    reactions: [
+      { from: "priya", text: "Tilden sounds amazing 🥾" },
+      { from: "jordan", text: "I'm in for either! Brunch after the hike? 😄" },
+    ],
+    // Short replies when Alex writes without @AI.
+    smallTalk: [
+      { from: "maya", text: "Haha love that 😄" },
+      { from: "jordan", text: "Same!" },
+      { from: "priya", text: "Agreed 🙌" },
+    ],
+  },
+
   connectOptions: [
     { id: "fun", icon: "🎉", title: "Fun group", desc: "4–5 students for hangouts. You can join professional events together too.", default: true },
     { id: "pro", icon: "💼", title: "Professional circle", desc: "A networking chat of ~8 students with similar career interests.", default: false },

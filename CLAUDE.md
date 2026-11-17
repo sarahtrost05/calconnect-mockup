@@ -37,6 +37,7 @@ Discounts are the main reason to open the app, and they reward meeting in person
 - **No protected traits.** Never match or explain matches using race, religion, gender, sexuality, disability, nationality, etc.
 - **Success = hours spent together, not time in the app.** No engagement-bait patterns (streaks, infinite feeds, guilt notifications). Every screen should move students toward a real meetup in a few taps.
 - AI content and sponsored content are always visibly labeled.
+- The AI sounds friendly and warm but not slangy: normal capitalization, short sentences, at most one emoji per message, no slang like "fr", "lol" or "bc". It says the group decides.
 - "Would meet again?" answers are private and never shown to other students.
 - Nobody is ever shown that someone passed on a group or on them. A student who passes simply disappears from the group, with no "Passed" label and no name in any message.
 
