@@ -68,6 +68,7 @@
     if (screen === "group") renderGroup();
     if (screen === "chat") { chatHeader(); renderChat(); }
     if (screen === "activities") renderActivities();
+    if (screen === "rating") renderRating();
   }
 
   // ---------- Onboarding rendering ----------
@@ -366,6 +367,7 @@
     wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14.5h2"/>',
     pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
     shield: '<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6z"/><path d="m9 12 2 2 4-4"/>',
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   };
   const icon = name => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${SMALL_ICONS[name]}</svg>`;
 
@@ -883,6 +885,96 @@
     if (action === "approve") approveMine();
   });
 
+  // ---------- Rating: one tap after the meetup + private "meet again?" ----------
+  const rateRoot = document.getElementById("rating-root");
+  let rate = freshRating();
+
+  function freshRating() {
+    return { stars: 0, again: null }; // again: yes | maybe | no
+  }
+
+  const STAR_LABELS = ["Tap to rate", "Not for me", "Not great", "It was okay", "Good", "Loved it"];
+  const AGAIN_OPTIONS = [
+    { id: "yes", label: "Yes" },
+    { id: "maybe", label: "Maybe" },
+    { id: "no", label: "No" },
+  ];
+  const STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.2 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg>';
+
+  // The meetup being rated: whatever the group booked, or brunch if the demo skipped booking.
+  const ratedIdea = () => act.phase === "booked" ? ideaById[winnerId()] : ideaById.brunch;
+
+  function againResult() {
+    const msgs = {
+      yes: ["Great, noted!", `We'll keep suggesting plans for ${G.name}.`],
+      maybe: ["Thanks, noted.", "We'll keep your group and also mix in a few events with other students."],
+      no: ["Thanks for being honest.", `We'll suggest a new group for you soon. No one in ${G.name} will be told.`],
+    };
+    const [title, text] = msgs[rate.again];
+    return `
+      <div class="result-card result-card--ok rating-done">
+        <h3>${title}</h3>
+        <p>${text}</p>
+        <div class="result-card__actions"><a class="btn btn--primary" href="#home">Back to Home</a></div>
+      </div>`;
+  }
+
+  function renderRating() {
+    const idea = ratedIdea();
+    const n = chatMembers.length;
+    const hours = parseFloat(idea.duration.replace(/[^\d.]/g, "")) || 2;
+    const saved = (idea.listPrice - idea.groupPrice) * n;
+
+    const stars = [1, 2, 3, 4, 5].map(i => `
+      <button class="star ${i <= rate.stars ? "is-on" : ""}" data-rate="star" data-value="${i}"
+        aria-label="${i} star${i === 1 ? "" : "s"}: ${STAR_LABELS[i]}" aria-pressed="${i === rate.stars}">${STAR_SVG}</button>`).join("");
+
+    const again = AGAIN_OPTIONS.map(o => `
+      <button class="again-btn ${rate.again === o.id ? "is-on" : ""}" data-rate="again" data-value="${o.id}"
+        aria-pressed="${rate.again === o.id}">${o.label}</button>`).join("");
+
+    rateRoot.innerHTML = `
+      <header class="app-header">
+        <h1>How was it?</h1>
+      </header>
+      ${groupBar()}
+
+      <section class="card meetup-recap">
+        <h2>${idea.title}</h2>
+        <p class="idea-card__meta">${icon("pin")}${idea.place}</p>
+        <p class="idea-card__meta">${icon("clock")}Yesterday · ${idea.when.replace(/^\w+ /, "")}</p>
+        <div class="recap-stats">
+          <div><strong>${hours} hrs</strong><span>together, ${n} of you</span></div>
+          <div><strong>${money2(saved)}</strong><span>saved as a group</span></div>
+        </div>
+      </section>
+
+      <section class="card rate-card">
+        <h3>Rate the activity</h3>
+        <div class="stars" role="group" aria-label="Rate the activity">${stars}</div>
+        <p class="rate-label ${rate.stars ? "is-set" : ""}">${STAR_LABELS[rate.stars]}</p>
+      </section>
+
+      <section class="card again-card">
+        <span class="private-badge">${icon("lock")}Private</span>
+        <h3>Would you meet this group again?</h3>
+        <div class="again" role="group" aria-label="Would you meet this group again?">${again}</div>
+        <p class="again__note">Only you and CalConnect see this answer. Your group is never told.</p>
+      </section>
+
+      ${rate.again ? againResult() : ""}
+
+      <p class="rating-note">${icon("shield")}Your ratings are private. CalConnect AI uses them to suggest better activities and matches for you.</p>`;
+  }
+
+  rateRoot.addEventListener("click", e => {
+    const el = e.target.closest("[data-rate]");
+    if (!el) return;
+    if (el.dataset.rate === "star") rate.stars = Number(el.dataset.value);
+    if (el.dataset.rate === "again") rate.again = el.dataset.value;
+    renderRating();
+  });
+
   // ---------- Global ----------
   document.addEventListener("click", e => {
     if (e.target.closest("[data-action='retake']")) {
@@ -899,6 +991,7 @@
     chat = freshChat();
     act.timers.forEach(clearTimeout);
     act = freshActivities();
+    rate = freshRating();
     if (location.hash === "#onboarding") route(); else location.hash = "#onboarding";
   });
 
