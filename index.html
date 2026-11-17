@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CalConnect Mockup</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Demo navigation: outside the phone, for presenting -->
+  <nav class="demo-nav" aria-label="Demo navigation">
+    <p class="demo-nav__title">CalConnect mockup <span>UGBA 177 · sample data</span></p>
+    <ol>
+      <li><a href="#onboarding">1. Onboarding</a></li>
+      <li><a href="#home">2. Home</a></li>
+      <li><a href="#group">3. Your group</a></li>
+      <li><a href="#chat">4. Group chat</a></li>
+      <li><a href="#activities">5. Activity ideas</a></li>
+      <li><a href="#mentor">6. Mentor</a></li>
+      <li><a href="#rating">7. Rating</a></li>
+    </ol>
+    <button type="button" class="demo-nav__reset" id="reset">Restart demo</button>
+  </nav>
+
+  <!-- Phone frame -->
+  <div class="phone">
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <span>●●● 5G ▮</span>
+    </div>
+
+    <main class="screen-area">
+      <!-- 1. Onboarding: rendered by app.js -->
+      <section class="screen" data-screen="onboarding" aria-label="Onboarding">
+        <div id="onboarding-root" class="onboarding"></div>
+      </section>
+
+      <!-- 2–7. Placeholders -->
+      <section class="screen" data-screen="home" aria-label="Home">
+        <header class="app-header"><h1>Hi, <span data-name></span> 👋</h1></header>
+        <div class="placeholder">
+          <p class="placeholder__notice" id="skip-notice" hidden>
+            We matched you on basic info. <a href="#onboarding" data-action="retake">Take the quiz anytime</a> for better matches.
+          </p>
+          <span class="placeholder__tag">Coming soon</span>
+          <h2>Home</h2>
+          <p>Next meetup, hours together and money saved, plus a card for each of your groups. No feed.</p>
+          <div class="placeholder__links">
+            <a class="btn btn--primary" href="#group">Open your group</a>
+            <a class="btn btn--ghost" href="#mentor">See your mentor</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="group" aria-label="Your group">
+        <header class="app-header"><h1>Your group</h1></header>
+        <div class="placeholder">
+          <span class="placeholder__tag">Coming soon</span>
+          <h2>Your group</h2>
+          <p>Fun / Professional toggle, 4–5 matched students and "why you were matched".</p>
+          <div class="placeholder__links"><a class="btn btn--primary" href="#chat">Open group chat</a></div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="chat" aria-label="Group chat">
+        <header class="app-header"><h1>Group chat</h1></header>
+        <div class="placeholder">
+          <span class="placeholder__tag">Coming soon</span>
+          <h2>Group chat</h2>
+          <p>AI intro message and @AI replies, always labeled as AI.</p>
+          <div class="placeholder__links"><a class="btn btn--primary" href="#activities">See activity ideas</a></div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="activities" aria-label="Activity ideas">
+        <header class="app-header"><h1>Activity ideas</h1></header>
+        <div class="placeholder">
+          <span class="placeholder__tag">Coming soon</span>
+          <h2>Activity ideas</h2>
+          <p>3 Berkeley and Bay Area ideas with group discounts, a vote, and a cost split each student approves.</p>
+          <div class="placeholder__links"><a class="btn btn--primary" href="#rating">Fast-forward to after the meetup</a></div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="mentor" aria-label="Mentor">
+        <header class="app-header"><h1>Your mentor</h1></header>
+        <div class="placeholder">
+          <span class="placeholder__tag">Coming soon</span>
+          <h2>Mentor</h2>
+          <p>Mentor profile, why you were matched, and a coffee-chat request.</p>
+          <div class="placeholder__links"><a class="btn btn--primary" href="#home">Back to Home</a></div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="rating" aria-label="Rating">
+        <header class="app-header"><h1>How was it?</h1></header>
+        <div class="placeholder">
+          <span class="placeholder__tag">Coming soon</span>
+          <h2>Rating</h2>
+          <p>One-tap rating and a private "would meet again?" question.</p>
+          <div class="placeholder__links"><a class="btn btn--primary" href="#home">Back to Home</a></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- In-app tab bar (hidden during onboarding) -->
+    <nav class="tab-bar" aria-label="App navigation">
+      <a href="#home" data-tab="home"><span aria-hidden="true">🏠</span>Home</a>
+      <a href="#group" data-tab="group"><span aria-hidden="true">👥</span>Groups</a>
+      <a href="#activities" data-tab="activities"><span aria-hidden="true">📍</span>Activities</a>
+      <a href="#mentor" data-tab="mentor"><span aria-hidden="true">🧭</span>Mentor</a>
+    </nav>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
