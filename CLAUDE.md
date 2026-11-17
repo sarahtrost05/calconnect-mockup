@@ -23,7 +23,7 @@ Discounts are the main reason to open the app, and they reward meeting in person
 
 ## Screens to mock up
 
-1. **Onboarding**: a 10-question quiz inside the CalCentral checklist. One tap skips it. The last step chooses fun group / professional circle / mentor.
+1. **Onboarding**: the CalCentral checklist (in Safari) only has a "Get the CalConnect app" item, so students download the app. Then: App Store sheet → app splash → welcome with "Continue with CalNet ID" → a 10-question quiz inside the app (one tap skips it) → choose fun group / professional circle / mentor → matching.
 2. **Home**: the next meetup, hours together and money saved, and cards for each of the student's groups. No feed.
 3. **Your group**: 4–5 matched students (or the professional circle), plus "why you were matched".
 4. **Group chat**: the AI posts the intro and answers `@AI` requests. Every AI message is clearly labeled as AI.
@@ -43,7 +43,7 @@ Discounts are the main reason to open the app, and they reward meeting in person
 
 - Plain HTML, CSS and JavaScript. No frameworks, no build step, no npm. It must run as-is on GitHub Pages.
 - Use relative paths so it works from a GitHub Pages subpath.
-- Phone-sized layout (around 390×844), centered on desktop.
+- Phone-sized layout (around 390×844), centered on desktop. It should look like a native iPhone app: Dynamic Island, status bar, home indicator, iOS-style large titles and tab bar, line icons rather than emoji in navigation.
 - **Fake sample data only.** No real student names, emails or IDs.
 - Every activity and event takes place at a real Berkeley or Bay Area location (e.g. Tilden Park, Telegraph Ave, Haas, San Francisco). Prices and times are made up.
 - Colors: Berkeley Blue `#002676` and California Gold `#FDB515`.

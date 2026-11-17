@@ -3,6 +3,7 @@ window.CC_DATA = {
   student: { name: "Alex", major: "Business (Haas)", year: "1st year" },
 
   // Other CalCentral checklist items, just for context on screen 1.
+  // The CalConnect item itself is built in app.js.
   checklist: [
     { label: "Submit Statement of Legal Residence", done: true },
     { label: "Upload your Cal 1 Card photo", done: true },

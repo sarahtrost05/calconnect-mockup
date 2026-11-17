@@ -2,21 +2,43 @@
   const DATA = window.CC_DATA;
   const SCREENS = ["onboarding", "home", "group", "chat", "activities", "mentor", "rating"];
 
+  // Onboarding steps, in order:
+  //   safari   CalCentral checklist in Safari, with a "Get the CalConnect app" item
+  //   store    App Store sheet on top of Safari (GET → OPEN)
+  //   splash   app launch screen
+  //   welcome  what CalConnect is + "Continue with CalNet ID"
+  //   intro    "Let's find your people": start quiz or skip
+  //   quiz     10 questions
+  //   connect  fun group / professional circle / mentor
+  //   matching "Finding your people…", then Home
+  //   done     onboarding finished (CalCentral item shows as ticked)
+
   // ---------- Demo state (in memory only; resets on reload) ----------
   const state = freshState();
-  let matchTimer = null;
+  let timer = null;
 
   function freshState() {
     return {
-      step: "checklist", // checklist | quiz | connect | matching
+      step: "safari",
+      installed: false,
       qIndex: 0,
-      answers: {},       // question index -> array of chosen options
+      answers: {},
       connect: new Set(DATA.connectOptions.filter(o => o.default).map(o => o.id)),
       skipped: false,
     };
   }
 
+  const APP_ICON = `
+    <svg viewBox="0 0 40 40" aria-hidden="true">
+      <circle cx="15" cy="20" r="9" fill="none" stroke="#fff" stroke-width="3.2"/>
+      <circle cx="25" cy="20" r="9" fill="none" stroke="#FDB515" stroke-width="3.2"/>
+    </svg>`;
+  const appIcon = (size = "") => `<div class="app-icon ${size}">${APP_ICON}</div>`;
+
   // ---------- Routing ----------
+  const phone = document.querySelector(".phone");
+  const screenArea = document.querySelector(".screen-area");
+
   function currentScreen() {
     const name = location.hash.replace("#", "");
     return SCREENS.includes(name) ? name : "onboarding";
@@ -33,27 +55,32 @@
     });
     document.querySelectorAll(".tab-bar a").forEach(a => {
       const tab = a.dataset.tab;
-      const active = tab === screen || (tab === "group" && (screen === "chat"));
-      a.classList.toggle("is-active", active);
+      a.classList.toggle("is-active", tab === screen || (tab === "group" && screen === "chat"));
     });
     document.querySelector(".tab-bar").hidden = screen === "onboarding";
     document.getElementById("skip-notice").hidden = !state.skipped;
-    document.querySelector(".screen-area").scrollTop = 0;
+    screenArea.scrollTop = 0;
 
     if (screen === "onboarding") renderOnboarding();
+    else phone.dataset.top = "app";
   }
 
-  // ---------- Onboarding ----------
+  // ---------- Onboarding rendering ----------
   const root = document.getElementById("onboarding-root");
 
+  const TOP = { safari: "white", store: "white", done: "white", splash: "dark", welcome: "white" };
+
   function renderOnboarding() {
-    if (state.step === "checklist" || state.step === "done") return renderChecklist();
-    if (state.step === "quiz") return renderQuiz();
-    if (state.step === "connect") return renderConnect();
-    if (state.step === "matching") return renderMatching();
+    phone.dataset.top = TOP[state.step] || "app";
+    const views = {
+      safari: renderSafari, store: renderSafari, done: renderSafari,
+      splash: renderSplash, welcome: renderWelcome, intro: renderIntro,
+      quiz: renderQuiz, connect: renderConnect, matching: renderMatching,
+    };
+    views[state.step]();
   }
 
-  function renderChecklist() {
+  function renderSafari() {
     const done = state.step === "done";
     const items = DATA.checklist.map(item => `
       <li class="${item.done ? "is-done" : ""}">
@@ -62,32 +89,103 @@
       </li>`).join("");
 
     root.innerHTML = `
-      <div class="portal-bar"><strong>CalCentral</strong><span>My Dashboard</span></div>
-      <div class="onboarding__body">
-        <h2>Welcome, ${DATA.student.name}!</h2>
-        <p class="onboarding__sub">Your new student checklist</p>
-        <ul class="checklist">
-          <li class="featured">
-            <div class="featured__head">
-              <span class="check ${done ? "check--done" : ""}" aria-hidden="true">${done ? "✓" : ""}</span>
-              <div>
-                <h3>Meet your CalConnect group ${done ? "" : '<span class="badge-new">NEW</span>'}</h3>
-                <p>${done
-                  ? "You're matched! Your group is waiting for you."
-                  : "Get matched with 4–5 new students who share your interests and free time, plus group discounts on Berkeley and Bay Area activities."}</p>
-              </div>
-            </div>
-            <div class="featured__actions">
-              ${done
-                ? `<a class="btn btn--primary" href="#home">Open CalConnect</a>
-                   <button class="btn--link" data-action="start">${state.skipped ? "Take the quiz for better matches" : "Retake the quiz"}</button>`
-                : `<button class="btn btn--primary" data-action="start">Start 10-question quiz</button>
-                   <p class="featured__meta">About 2 minutes</p>
-                   <button class="btn--link" data-action="skip">Skip for now and match me on basic info</button>`}
-            </div>
-          </li>
-          ${items}
+      <div class="safari">
+        <div class="safari__page">
+          <div class="portal-bar"><strong>CalCentral</strong><span>My Dashboard</span></div>
+          <div class="onboarding__body">
+            <h2>Welcome, ${DATA.student.name}!</h2>
+            <p class="onboarding__sub">Your new student checklist</p>
+            <ul class="checklist">
+              <li class="featured">
+                <div class="featured__head">
+                  <span class="check ${done ? "check--done" : ""}" aria-hidden="true">${done ? "✓" : ""}</span>
+                  <div>
+                    <h3>Get the CalConnect app ${done ? "" : '<span class="badge-new">NEW</span>'}</h3>
+                    <p>${done
+                      ? "You're matched! Your group is waiting in the app."
+                      : "Meet 4–5 new students who share your interests and free time, with group discounts on Berkeley and Bay Area activities."}</p>
+                  </div>
+                </div>
+                <div class="featured__actions">
+                  ${done
+                    ? `<a class="btn btn--primary" href="#home">Open CalConnect</a>`
+                    : `<button class="btn btn--primary" data-action="get-app">Get the app</button>
+                       <p class="featured__meta">Free · iPhone and Android</p>`}
+                </div>
+              </li>
+              ${items}
+            </ul>
+          </div>
+        </div>
+        <div class="safari__toolbar">
+          <div class="safari__url"><small>AA</small>🔒 calcentral.berkeley.edu</div>
+        </div>
+        ${state.step === "store" ? renderStoreSheet() : ""}
+      </div>`;
+  }
+
+  function renderStoreSheet() {
+    return `
+      <div class="sheet-backdrop" data-action="close-store">
+        <div class="sheet" role="dialog" aria-label="App Store">
+          <div class="sheet__grabber"></div>
+          <p class="sheet__store">App Store <button data-action="close-store">Cancel</button></p>
+          <div class="sheet__app">
+            ${appIcon()}
+            <div><h3>CalConnect</h3><p>Meet your people at Berkeley</p></div>
+            <button class="sheet__get ${state.installing ? "is-loading" : ""}" data-action="install"
+              aria-label="${state.installed ? "Open" : "Get"}">${state.installing ? "" : state.installed ? "OPEN" : "GET"}</button>
+          </div>
+          <div class="sheet__stats">
+            <div><strong>4.8 ★</strong>Ratings</div>
+            <div><strong>17+</strong>Age</div>
+            <div><strong>Social</strong>Category</div>
+          </div>
+          <p class="sheet__desc">Small groups of new students, real meetups around Berkeley and the Bay, and group discounts that unlock when you show up together.</p>
+        </div>
+      </div>`;
+  }
+
+  function renderSplash() {
+    root.innerHTML = `<div class="splash">${appIcon("app-icon--lg")}<strong>CalConnect</strong></div>`;
+    clearTimeout(timer);
+    timer = setTimeout(() => go("welcome"), 1300);
+  }
+
+  const ICONS = {
+    group: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.6 0 4.5 1.8 4.5 4.5"/></svg>',
+    tag: '<svg viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>',
+    brief: '<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg>',
+  };
+
+  function renderWelcome() {
+    root.innerHTML = `
+      <div class="welcome">
+        ${appIcon("app-icon--lg")}
+        <h2>Meet your people<br>at Berkeley</h2>
+        <p class="welcome__sub">Less scrolling, more hanging out.</p>
+        <ul class="features">
+          <li>${ICONS.group}<div><strong>A small group of 4–5</strong><span>Matched on interests and free time, and you can keep meeting new people.</span></div></li>
+          <li>${ICONS.tag}<div><strong>Group discounts</strong><span>Unlock deals around Berkeley and the Bay when you show up together.</span></div></li>
+          <li>${ICONS.brief}<div><strong>Professional circle and mentor</strong><span>Optional: networking events and 1:1 coffee chats.</span></div></li>
         </ul>
+        <div class="welcome__actions">
+          <button class="btn btn--primary" data-action="signin">Continue with CalNet ID</button>
+          <p class="welcome__fine">We only use your name, major and year.</p>
+        </div>
+      </div>`;
+  }
+
+  function renderIntro() {
+    root.innerHTML = `
+      <div class="quiz-intro">
+        <h2>Hi ${DATA.student.name}, let's find your people</h2>
+        <p>10 quick questions about what you enjoy, when you're free and what you're looking for. About 2 minutes.</p>
+        <p>We never ask about or match on who you are, only what you like to do.</p>
+        <div class="welcome__actions">
+          <button class="btn btn--primary" data-action="start">Start quiz</button>
+          <button class="btn--link" data-action="skip">Skip for now and match me on basic info</button>
+        </div>
       </div>`;
   }
 
@@ -165,29 +263,37 @@
           ? "Matching you on basic info like your major and free time."
           : "Matching on your interests, free time and goals. Never on who you are."}</p>
       </div>`;
-    clearTimeout(matchTimer);
-    matchTimer = setTimeout(() => { state.step = "done"; location.hash = "#home"; }, 1800);
+    clearTimeout(timer);
+    timer = setTimeout(() => { state.step = "done"; location.hash = "#home"; }, 1800);
   }
 
   // ---------- Onboarding interactions ----------
   function go(step) {
     state.step = step;
     renderOnboarding();
-    document.querySelector(".screen-area").scrollTop = 0;
+    screenArea.scrollTop = 0;
   }
 
   root.addEventListener("click", e => {
-    const btn = e.target.closest("button");
+    const btn = e.target.closest("button, [data-action]");
     if (!btn) return;
-
     const action = btn.dataset.action;
+
+    // Clicking the dimmed area (not the sheet itself) closes the App Store sheet.
+    if (action === "close-store") {
+      if (btn.classList.contains("sheet-backdrop") && e.target !== btn) return;
+      return go("safari");
+    }
+    if (action === "get-app") { screenArea.scrollTop = 0; return go("store"); }
+    if (action === "install") return install();
+    if (action === "signin") return go("intro");
     if (action === "start") { state.qIndex = 0; state.skipped = false; return go("quiz"); }
     if (action === "skip") { state.skipped = true; state.connect = new Set(["fun"]); return go("matching"); }
     if (action === "match") return go("matching");
     if (action === "next") return nextQuestion();
     if (action === "back") {
       if (state.step === "connect") { state.qIndex = DATA.quiz.length - 1; return go("quiz"); }
-      if (state.qIndex === 0) return go("checklist");
+      if (state.qIndex === 0) return go("intro");
       state.qIndex--; return renderQuiz();
     }
 
@@ -199,6 +305,20 @@
       return renderConnect();
     }
   });
+
+  // GET → spinner → OPEN → app launches
+  function install() {
+    if (state.installing) return;
+    if (state.installed) return go("splash");
+    state.installing = true;
+    renderSafari();
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      state.installing = false;
+      state.installed = true;
+      if (state.step === "store") renderSafari();
+    }, 1200);
+  }
 
   function pickOption(opt) {
     const i = state.qIndex;
@@ -228,15 +348,21 @@
   });
 
   document.getElementById("reset").addEventListener("click", () => {
-    clearTimeout(matchTimer);
-    Object.assign(state, freshState());
+    clearTimeout(timer);
+    Object.assign(state, freshState(), { installing: false });
     if (location.hash === "#onboarding") route(); else location.hash = "#onboarding";
   });
 
   document.querySelectorAll("[data-name]").forEach(el => { el.textContent = DATA.student.name; });
 
   window.addEventListener("hashchange", () => {
-    if (currentScreen() !== "onboarding") clearTimeout(matchTimer);
+    // Leaving onboarding mid-animation: stop timers so they don't jump screens later.
+    if (currentScreen() !== "onboarding") {
+      clearTimeout(timer);
+      if (state.step === "splash") state.step = "welcome";
+      if (state.step === "matching") state.step = "done";
+      state.installing = false;
+    }
     route();
   });
   route();
