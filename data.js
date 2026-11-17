@@ -124,7 +124,71 @@ window.CC_DATA = {
       ],
       followUp: "Want me to start a vote?",
     },
-    otherReply: "I'm best at hangout ideas, finding a time that works for everyone and splitting costs. Try \"@AI ideas for Saturday?\" 🙂",
+    otherReply: "I'm not sure about that one. I'm best at hangout ideas, finding a time that works for everyone and splitting costs. Try asking me about coffee, food, hikes or study spots 🙂",
+
+    // Offline AI: used when no Claude API key is set (or the live call fails).
+    // Checked top to bottom; the first match wins. Several replies rotate if
+    // someone asks the same kind of thing again. Places are real, prices made up.
+    // "ideas" is special: it answers with the scripted ideas card above.
+    aiIntents: [
+      { match: /\b(hi|hey|hello|yo|good (morning|evening))\b/i, onlyIfShort: true, replies: [
+        "Hi Alex! 👋 Ask me for hangout ideas, a time that works for everyone or cheap spots near campus.",
+      ] },
+      { match: /thank|thx|appreciate/i, replies: [
+        "Anytime! Have fun, and let me know if you want more ideas.",
+        "Happy to help. The group decides, I just suggest 🙂",
+      ] },
+      { match: /who are you|what can you do|help\b|how does this work/i, replies: [
+        "I'm the CalConnect AI. I suggest hangouts and events, find times that work for everyone and set up cost splits. I never book or pay for anything without each of you approving it.",
+      ] },
+      { match: /coffee|caf[eé]|latte|espresso|matcha/i, replies: [
+        "Strada is the classic pick ☕ It's right by campus and the patio is great for groups. For a quieter study session, Edmonds is a nice choice.",
+        "If Strada is packed, try Caffe Mediterraneum on Telegraph. It's been around forever and has plenty of seats for 4.",
+      ] },
+      { match: /study|library|homework|midterm|exam|focus/i, replies: [
+        "Moffitt Library is open late and has group study rooms you can book 📚 Free Speech Movement Café is right next to it for snacks.",
+        "For something calmer, Doe Library's reading room is beautiful. Edmonds is a good café option if you want to talk while you work.",
+      ] },
+      { match: /rain|indoor|board ?game|games|cozy/i, replies: [
+        "Rainy day idea: Victory Point Café on Shattuck has hundreds of board games 🎲 A table for 4 is about $5 each with your group discount.",
+      ] },
+      { match: /food|eat|lunch|dinner|hungry|pizza|brunch|snack/i, replies: [
+        "Cheese Board Pizza on Shattuck is a Berkeley classic 🍕 A whole pizza split 4 ways comes to about $7 each.",
+        "Telegraph Ave has lots of cheap options close to campus. The Downtown Berkeley Farmers' Market on Saturday mornings is great for grazing together too.",
+      ] },
+      { match: /hike|hiking|trail|outdoor|nature|walk|run\b/i, replies: [
+        "The Big C trail starts right behind Memorial Stadium and takes about an hour round trip 🥾 It's free and the view of the Bay is great.",
+        "For a longer hike, Tilden Regional Park has easy loops and a little steam train. It's a short bus ride from campus.",
+      ] },
+      { match: /sunset|view|photo|pictures/i, replies: [
+        "Indian Rock Park in North Berkeley has one of the best sunset views of the Bay 🌅 It's free and about 20 minutes from campus by bus.",
+      ] },
+      { match: /\bsf\b|san francisco|the city|bart/i, replies: [
+        "Downtown Berkeley BART gets you to San Francisco in about 25 minutes 🚇 The Ferry Building and Dolores Park are easy, cheap picks for a group.",
+      ] },
+      { match: /career|network|internship|job|consult|finance|banking|resume|recruit|info session|professional/i, replies: [
+        "There's a startup demo night in SoMa on Thursday, $10 each with a group ticket 💼 It's in Activity ideas if you want to vote on it. Your professional circle and mentor can help with career questions too.",
+      ] },
+      { match: /discount|cheap|budget|price|cost|money|save|afford|expensive/i, replies: [
+        "Discounts grow with how many of you come: 3 or more get 10% off and the whole group gets 20% 💸 They unlock when you check in together at the venue.",
+      ] },
+      { match: /vote|book|split|pay|approve/i, replies: [
+        "Open Activity ideas to vote. Once a plan wins, I set up the cost split and each of you approves your own share. Nobody ever pays for anyone else.",
+      ] },
+      { match: /when|what time|schedule|available|thursday|evening|morning/i, replies: [
+        "You're all free Thursday evenings and Saturday mornings 🗓️ Want me to suggest something for one of those?",
+      ] },
+      { match: /why.*match|matched|how.*match/i, replies: [
+        "You were matched on your quiz answers: shared interests, free time, budget and how close you live. Never on personal traits like gender, religion or ethnicity.",
+      ] },
+      { match: /privat|data|rating|who can see|anonymous/i, replies: [
+        "Ratings and \"would meet again\" answers are private. Only you and CalConnect see them, and votes only show totals 🔒",
+      ] },
+      { match: /mentor/i, replies: [
+        "You can turn on a mentor in the Mentor tab. It's a 1:1 match with an upper-year student for coffee chats, and they accept each request.",
+      ] },
+      { match: /idea|suggest|saturday|sunday|weekend|plans?\b|hang ?out|what (should|can|could) we do|activit|bored|fun/i, ideas: true },
+    ],
     // Group members chiming in after the AI's ideas.
     reactions: [
       { from: "priya", text: "Kayaking sounds so fun 🛶" },

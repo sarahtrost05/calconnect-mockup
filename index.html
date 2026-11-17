@@ -16,10 +16,24 @@
       <li><a href="#group">3. Your group</a></li>
       <li><a href="#chat">4. Group chat</a></li>
       <li><a href="#activities">5. Activity ideas</a></li>
-      <li><a href="#mentor">6. Mentor</a></li>
-      <li><a href="#rating">7. Rating</a></li>
+      <li><a href="#rating">6. Rating</a></li>
+      <li><a href="#mentor">7. Mentor</a></li>
     </ol>
-    <button type="button" class="demo-nav__reset" id="reset">Restart demo</button>
+    <div class="demo-nav__buttons">
+      <button type="button" class="demo-nav__reset" id="reset">Restart demo</button>
+      <button type="button" class="demo-nav__reset live-ai__toggle" id="live-ai-toggle" aria-expanded="false" aria-controls="live-ai-panel">Live AI: <span>Off</span></button>
+    </div>
+    <!-- Optional: real Claude answers in the group chat, with the presenter's own key -->
+    <div class="live-ai" id="live-ai-panel" hidden>
+      <p class="live-ai__status" id="live-ai-status"></p>
+      <form class="live-ai__form" id="live-ai-form">
+        <label for="live-ai-key">Anthropic API key</label>
+        <input id="live-ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
+        <button type="submit">Save</button>
+      </form>
+      <button type="button" class="live-ai__remove" id="live-ai-remove" hidden>Remove key</button>
+      <p class="live-ai__fine">Saved only in this browser, never in the code. Each @AI message costs a little on your Anthropic account. Without a key, offline replies are used.</p>
+    </div>
   </nav>
 
   <!-- Phone frame -->
@@ -103,14 +117,21 @@
         </div>
       </section>
 
-      <!-- Rating after the meetup: rendered by app.js -->
-      <section class="screen" data-screen="rating" aria-label="Rating">
-        <div id="rating-root" class="rating"></div>
-      </section>
     </main>
 
     <!-- Action sheets and dialogs that sit above everything in the phone -->
     <div id="overlay-root"></div>
+
+    <!-- Rating: pops up as a sheet over Home after the meetup. Rendered by app.js -->
+    <section class="screen rating-sheet" data-screen="rating" aria-label="Rate your meetup" role="dialog" aria-modal="true">
+      <div class="rating-sheet__panel">
+        <div class="rating-sheet__top">
+          <span class="grabber" aria-hidden="true"></span>
+          <a class="rating-sheet__close" href="#home">Not now</a>
+        </div>
+        <div id="rating-root" class="rating"></div>
+      </div>
+    </section>
 
     <!-- In-app tab bar (hidden during onboarding) -->
     <nav class="tab-bar" aria-label="App navigation">

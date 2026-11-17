@@ -73,6 +73,21 @@ a { color: var(--blue); }
   cursor: pointer;
 }
 .demo-nav__reset:hover { border-color: #fff; }
+.demo-nav__buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.live-ai__toggle span { font-weight: 600; }
+.live-ai__toggle[data-state="on"] { border-color: var(--gold); color: var(--gold); }
+.live-ai__toggle[data-state="error"] { border-color: #ff8a80; color: #ff8a80; }
+.live-ai { margin-top: 12px; padding: 12px; border-radius: 10px; background: rgba(255,255,255,.08); font-size: 13px; }
+.live-ai__status { margin: 0 0 10px; }
+.live-ai__form { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.live-ai__form label { grid-column: 1 / -1; font-size: 12px; opacity: .8; }
+.live-ai__form input { min-width: 0; padding: 7px 9px; border-radius: 7px; border: 0; font: inherit; }
+.live-ai__form button, .live-ai__remove {
+  padding: 7px 12px; border-radius: 7px; border: 0; font: inherit; font-weight: 600; cursor: pointer;
+  background: var(--gold); color: var(--blue);
+}
+.live-ai__remove { margin-top: 8px; background: none; color: #fff; border: 1px solid rgba(255,255,255,.4); font-weight: 400; }
+.live-ai__fine { margin: 10px 0 0; font-size: 11px; opacity: .75; line-height: 1.4; }
 
 /* ---------- Phone frame ---------- */
 .phone {
@@ -715,7 +730,22 @@ a { color: var(--blue); }
 
 /* ---------- Small screens: phone fills the viewport ---------- */
 /* ---------- Rating ---------- */
-.rating { padding-bottom: 24px; }
+.screen.rating-sheet.is-active {
+  display: flex; align-items: flex-end;
+  position: absolute; inset: 0; z-index: 20; min-height: 0;
+  padding-top: 58px; background: rgba(0,0,0,.35);
+  animation: fade .25s ease;
+}
+.rating-sheet__panel {
+  width: 100%; max-height: 100%; overflow-y: auto; scrollbar-width: none;
+  background: var(--bg); border-radius: 14px 14px 0 0;
+  animation: slide-up .35s cubic-bezier(.2,.8,.2,1);
+}
+.rating-sheet__panel::-webkit-scrollbar { display: none; }
+.rating-sheet__top { position: relative; display: flex; justify-content: flex-end; padding: 8px 16px 0; min-height: 32px; }
+.grabber { position: absolute; left: 50%; top: 6px; width: 36px; height: 5px; border-radius: 3px; background: #c7c7cc; transform: translateX(-50%); }
+.rating-sheet__close { font-size: 16px; color: var(--blue); text-decoration: none; padding-top: 8px; }
+.rating { padding-bottom: 34px; }
 .rating .app-header h1 { font-size: 30px; }
 .rating .card { margin: 12px 16px 0; }
 .rating h3 { margin: 0; font-size: 17px; }
@@ -763,6 +793,7 @@ a { color: var(--blue); }
   .demo-nav ol { display: flex; overflow-x: auto; gap: 4px; margin-bottom: 8px; }
   .demo-nav a { white-space: nowrap; padding: 6px 10px; font-size: 13px; }
   .demo-nav__reset { font-size: 12px; padding: 4px 10px; }
+  .live-ai { margin-top: 8px; padding: 10px; }
   .phone {
     width: 100%; height: auto; flex: 1; max-height: none;
     min-height: calc(100vh - 110px);

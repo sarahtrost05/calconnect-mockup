@@ -48,14 +48,16 @@
     const screen = currentScreen();
 
     document.querySelectorAll(".screen").forEach(el => {
-      el.classList.toggle("is-active", el.dataset.screen === screen);
+      // The rating sheet sits on top of Home.
+      const under = screen === "rating" && el.dataset.screen === "home";
+      el.classList.toggle("is-active", el.dataset.screen === screen || under);
     });
     document.querySelectorAll(".demo-nav a").forEach(a => {
       a.classList.toggle("is-active", a.getAttribute("href") === "#" + screen);
     });
     document.querySelectorAll(".tab-bar a").forEach(a => {
       const tab = a.dataset.tab;
-      a.classList.toggle("is-active", tab === screen || (tab === "group" && screen === "chat"));
+      a.classList.toggle("is-active", tab === screen || (tab === "group" && screen === "chat") || (tab === "home" && screen === "rating"));
     });
     // Like most iPhone chat apps, the chat hides the tab bar to make room for the keyboard.
     document.querySelector(".tab-bar").hidden = screen === "onboarding" || screen === "chat";
@@ -539,7 +541,7 @@
   let chat = freshChat();
 
   function freshChat() {
-    return { messages: C.seed.map(m => ({ ...m })), pending: [], typing: null, timers: [], askedIdeas: false, smallTalkIndex: 0 };
+    return { messages: C.seed.map(m => ({ ...m })), pending: [], typing: null, timers: [], askedIdeas: false, smallTalkIndex: 0, waiting: 0, intentCount: {} };
   }
 
   const escapeHtml = str => str.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -584,7 +586,8 @@
 
   function renderChat() {
     const list = [...chat.messages];
-    if (chat.typing) list.push({ from: chat.typing, typing: true });
+    const typer = chat.typing || (chat.waiting ? "ai" : null);
+    if (typer) list.push({ from: typer, typing: true });
 
     chatEls.messages.innerHTML = list.map((msg, i) => {
       const prev = list[i - 1];
@@ -634,17 +637,125 @@
     renderChat();
 
     if (/@ai\b/i.test(text)) {
-      if (/idea|saturday|weekend|plan|do\b|hang/i.test(text)) {
-        chat.askedIdeas = true;
-        let t = queueMessage({ from: "ai", ...C.ideasReply }, 300);
-        C.reactions.forEach(r => { t = queueMessage({ ...r }, t + 500); });
-      } else {
-        queueMessage({ from: "ai", text: C.otherReply }, 300);
-      }
+      aiRespond(text);
     } else {
       const reply = C.smallTalk[chat.smallTalkIndex++ % C.smallTalk.length];
       queueMessage({ ...reply }, 500);
     }
+  }
+
+  // ---------- The AI's answers ----------
+  // Live mode: Claude answers, if the presenter saved their own API key (demo nav).
+  // Otherwise (or if the call fails) the offline replies in data.js answer.
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  function findIntent(text) {
+    const q = text.replace(/@ai\b/gi, "").trim();
+    return C.aiIntents.find(it => it.match.test(q) && (!it.onlyIfShort || q.split(/\s+/).length <= 4));
+  }
+
+  function offlineReply(intent) {
+    if (!intent) return { text: C.otherReply };
+    if (intent.ideas) return { ...C.ideasReply };
+    const key = C.aiIntents.indexOf(intent);
+    const n = chat.intentCount[key] = (chat.intentCount[key] || 0) + 1;
+    return { text: intent.replies[(n - 1) % intent.replies.length] };
+  }
+
+  async function aiRespond(text) {
+    const c = chat;
+    const intent = findIntent(text);
+    const isIdeas = !!(intent && intent.ideas);
+    c.waiting++;
+    renderChat();
+    const started = Date.now();
+
+    let reply = null;
+    if (liveAI.key()) {
+      try {
+        const answer = await askClaude(c.messages);
+        reply = { text: answer };
+        if (isIdeas) reply.ideas = C.ideasReply.ideas;
+        liveAI.setStatus("on");
+      } catch (err) {
+        console.warn("Live AI failed, using offline replies:", err.message);
+        liveAI.setStatus("error", err.message);
+      }
+    }
+    if (!reply) reply = offlineReply(intent);
+
+    await wait(Math.max(0, 1100 - (Date.now() - started))); // feels like typing
+    if (c !== chat) return; // demo was restarted meanwhile
+    c.waiting--;
+    c.messages.push({ from: "ai", ...reply });
+    if (isIdeas && !c.askedIdeas) {
+      c.askedIdeas = true;
+      let t = 0;
+      C.reactions.forEach(r => { t = queueMessage({ ...r }, t + 500); });
+    }
+    renderChat();
+  }
+
+  // Everything Claude needs to answer as the CalConnect AI. Built from the sample data.
+  function systemPrompt() {
+    const members = chatMembers.map(m =>
+      `- ${m.name}${m.you ? " (the student using the app)" : ""}: ${m.major}, ${m.year}. Interests: ${m.interests.join(", ")}`).join("\n");
+    const ideas = A.ideas.map(i =>
+      `- ${i.title}${i.type === "sponsored" ? ` (Sponsored by ${i.sponsor})` : ""}: ${i.place}, ${i.when}, ${money2(i.groupPrice)} each instead of ${money2(i.listPrice)} (${i.deal})`).join("\n");
+    return `You are the CalConnect AI inside a group chat in CalConnect, an app that matches new UC Berkeley students into small groups and suggests real-life meetups with group discounts. This is a class-project demo with fake students.
+
+Group: "${G.name}" (fun group, ${chatMembers.length} members)
+${members}
+Why they were matched: ${G.reasons.map(r => r.text).join(" ")}
+
+Activity ideas already in the app (students vote on them in the Activity ideas tab):
+${ideas}
+
+Discounts: they grow with how many members come (3+ people = 10%, whole group = 20%) and unlock when the group checks in together at the venue.
+
+How to reply:
+- Write like a friendly, warm assistant, not slangy. Normal capitalization, short sentences, at most one emoji per message. No slang like "fr", "lol" or "bc".
+- Keep it short: 1 to 3 sentences, under 60 words. Plain text only, no markdown, no lists.
+- Only suggest real places in Berkeley or the Bay Area. For coffee, recommend Strada or Edmonds. Prices you mention are estimates.
+- If you mention the sponsored activity, say it is sponsored.
+- You suggest, the group decides. Never claim you booked, paid or committed anyone to anything; each student approves their own share in the app.
+- Never use or guess race, religion, gender, sexuality, disability, nationality or other protected traits.
+- Never reveal ratings, "would meet again" answers, who voted for what, or that anyone passed on the group.
+- Push toward meeting in person, not spending more time in the app.
+- If asked something unrelated to hanging out, studying, campus life or careers, answer briefly if harmless, otherwise steer back politely.`;
+  }
+
+  async function askClaude(messages) {
+    const name = from => from === "ai" ? "CalConnect AI" : memberById[from].name;
+    const transcript = messages.map(m => `${name(m.from)}: ${m.text}`).join("\n");
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": liveAI.key(),
+        "anthropic-version": "2026-10-21",
+        "anthropic-beta": "server-side-fallback-2026-07-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-5-5",
+        max_tokens: 2000,
+        output_config: { effort: "low" },
+        fallbacks: "default", // retry on another model if a request is declined
+        system: systemPrompt(),
+        messages: [{
+          role: "user",
+          content: `Group chat so far:\n\n${transcript}\n\nWrite the CalConnect AI's next message, replying to ${me.name}'s latest message. Reply with the message text only.`,
+        }],
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data.error && data.error.message) || `HTTP ${res.status}`);
+    if (data.stop_reason === "refusal") throw new Error("Request declined");
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+    if (!text) throw new Error("Empty reply");
+    // Plain text only: drop any markdown bold/italics the model adds.
+    return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/^CalConnect AI:\s*/i, "");
   }
 
   // Tapping the suggestion "types" it into the box, like a student would.
@@ -661,7 +772,7 @@
     // Leaving mid-conversation: post any replies still on their way right away.
     chat.timers.forEach(clearTimeout);
     chat.timers = [];
-    chat.typing = null;
+    chat.typing = null; // a live AI reply still on its way keeps its "typing" dots
     chat.messages.push(...chat.pending);
     chat.pending = [];
   }
@@ -832,7 +943,7 @@
           <p>All ${n} approved. CalConnect AI posted the details in your group chat.</p>
           <div class="result-card__actions">
             <a class="btn btn--primary" href="#chat">Open group chat</a>
-            <a class="btn btn--ghost" href="#rating">Fast-forward to after the meetup</a>
+            <button class="btn btn--ghost" data-act="after">Fast-forward to after the meetup</button>
           </div>
         </div>` : ""}`;
   }
@@ -883,7 +994,16 @@
     }
     if (action === "book") { act.phase = "booking"; renderActivities(); screenArea.scrollTop = 0; }
     if (action === "approve") approveMine();
+    if (action === "after") meetupOver();
   });
+
+  // Demo time skip: the meetup ends, you land on Home and the rating pops up by itself.
+  let rateTimer = null;
+  function meetupOver() {
+    document.querySelector(".status-bar__time").textContent = "12:05";
+    location.hash = "#home";
+    rateTimer = setTimeout(() => { rateTimer = null; location.hash = "#rating"; }, 1200);
+  }
 
   // ---------- Rating: one tap after the meetup + private "meet again?" ----------
   const rateRoot = document.getElementById("rating-root");
@@ -942,7 +1062,7 @@
       <section class="card meetup-recap">
         <h2>${idea.title}</h2>
         <p class="idea-card__meta">${icon("pin")}${idea.place}</p>
-        <p class="idea-card__meta">${icon("clock")}Yesterday · ${idea.when.replace(/^\w+ /, "")}</p>
+        <p class="idea-card__meta">${icon("clock")}Today · ${idea.when.replace(/^\w+ /, "")}</p>
         <div class="recap-stats">
           <div><strong>${hours} hrs</strong><span>together, ${n} of you</span></div>
           <div><strong>${money2(saved)}</strong><span>saved as a group</span></div>
@@ -967,6 +1087,11 @@
       <p class="rating-note">${icon("shield")}Your ratings are private. CalConnect AI uses them to suggest better activities and matches for you.</p>`;
   }
 
+  // Tapping the dimmed area above the sheet closes it, like iOS.
+  document.querySelector(".rating-sheet").addEventListener("click", e => {
+    if (e.target.classList.contains("rating-sheet")) location.hash = "#home";
+  });
+
   rateRoot.addEventListener("click", e => {
     const el = e.target.closest("[data-rate]");
     if (!el) return;
@@ -974,6 +1099,51 @@
     if (el.dataset.rate === "again") rate.again = el.dataset.value;
     renderRating();
   });
+
+  // ---------- Live AI settings (demo nav, outside the phone) ----------
+  // The presenter's own Anthropic API key, kept only in this browser's localStorage.
+  const liveAI = (() => {
+    const STORE = "calconnect-claude-key";
+    const els = {
+      toggle: document.getElementById("live-ai-toggle"),
+      panel: document.getElementById("live-ai-panel"),
+      form: document.getElementById("live-ai-form"),
+      input: document.getElementById("live-ai-key"),
+      remove: document.getElementById("live-ai-remove"),
+      status: document.getElementById("live-ai-status"),
+    };
+    let key = "";
+    try { key = localStorage.getItem(STORE) || ""; } catch (e) { /* storage blocked: key lasts until reload */ }
+
+    function setStatus(kind, detail) {
+      els.toggle.dataset.state = key ? kind : "off";
+      els.toggle.querySelector("span").textContent = !key ? "Off" : kind === "error" ? "Error" : "On";
+      els.status.textContent = !key
+        ? "Off: the AI uses offline sample replies."
+        : kind === "error" ? `Last call failed (${detail}). Using offline replies.` : "On: Claude answers @AI messages.";
+      els.remove.hidden = !key;
+    }
+
+    els.toggle.addEventListener("click", () => {
+      els.panel.hidden = !els.panel.hidden;
+      els.toggle.setAttribute("aria-expanded", String(!els.panel.hidden));
+    });
+    els.form.addEventListener("submit", e => {
+      e.preventDefault();
+      key = els.input.value.trim();
+      els.input.value = "";
+      try { key ? localStorage.setItem(STORE, key) : localStorage.removeItem(STORE); } catch (err) { /* ignore */ }
+      setStatus("on");
+    });
+    els.remove.addEventListener("click", () => {
+      key = "";
+      try { localStorage.removeItem(STORE); } catch (err) { /* ignore */ }
+      setStatus("off");
+    });
+    setStatus("on");
+
+    return { key: () => key, setStatus };
+  })();
 
   // ---------- Global ----------
   document.addEventListener("click", e => {
@@ -992,6 +1162,8 @@
     act.timers.forEach(clearTimeout);
     act = freshActivities();
     rate = freshRating();
+    clearTimeout(rateTimer);
+    document.querySelector(".status-bar__time").textContent = "9:41";
     if (location.hash === "#onboarding") route(); else location.hash = "#onboarding";
   });
 
@@ -1008,6 +1180,7 @@
     if (currentScreen() !== "group") finishGroupTimers();
     if (currentScreen() !== "chat") finishChatTimers();
     if (currentScreen() !== "activities") finishActivityTimers();
+    if (currentScreen() !== "home") { clearTimeout(rateTimer); rateTimer = null; }
     route();
   });
   route();
