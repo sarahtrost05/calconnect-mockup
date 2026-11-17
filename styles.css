@@ -444,6 +444,84 @@ a { color: var(--blue); }
   .progress__fill { transition: none; }
 }
 
+/* ---------- Your group ---------- */
+.eyebrow { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.group .app-header h1 { font-size: 30px; }
+.accept-meter { display: flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.accept-meter span:last-child { margin-left: 4px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); transition: background .3s; }
+.dot--accepted { background: var(--ok); }
+
+.members { list-style: none; margin: 12px 16px 0; padding: 0; background: #fff; border-radius: var(--radius); overflow: hidden; }
+.member { display: flex; gap: 12px; padding: 14px; border-bottom: .5px solid var(--line); transition: opacity .3s; }
+.member:last-child { border-bottom: none; }
+.member.is-out { opacity: .45; }
+.avatar {
+  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center;
+  color: #fff; font-weight: 700; font-size: 19px;
+}
+.avatar--you { box-shadow: 0 0 0 2.5px #fff, 0 0 0 4.5px var(--gold); }
+.member__body { flex: 1; min-width: 0; }
+.member__top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.member__top strong { font-size: 16px; }
+.member__meta { margin: 1px 0 7px; font-size: 13px; color: var(--muted); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font-size: 12px; padding: 3px 8px; border-radius: 99px; background: #f0f1f5; color: #3c3c43; }
+.chip--shared { background: var(--gold-soft); color: #7a5000; font-weight: 600; }
+
+.status { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.status--you { background: var(--blue-soft); color: var(--blue); }
+.status--in { background: #e3f4ea; color: var(--ok); }
+.status--pending { background: #f0f1f5; color: var(--muted); }
+
+.card { background: #fff; border-radius: var(--radius); margin: 16px; padding: 16px; }
+.why h2 { margin: 0 0 12px; font-size: 18px; }
+.reasons { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.reasons li { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.4; }
+.reasons strong { display: block; margin-bottom: 2px; }
+.reasons span { color: var(--muted); }
+.reasons .chips { margin-top: 4px; }
+.ico {
+  width: 22px; height: 22px; flex-shrink: 0; color: var(--blue);
+  fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+.why__note {
+  display: flex; gap: 8px; align-items: flex-start;
+  margin: 16px 0 0; padding-top: 12px; border-top: .5px solid var(--line);
+  font-size: 12px; color: var(--muted); line-height: 1.4;
+}
+.why__note .ico { width: 18px; height: 18px; color: var(--ok); }
+
+.action-bar {
+  position: sticky; bottom: 0;
+  display: grid; grid-template-columns: 1fr 2fr; gap: 10px;
+  padding: 12px 16px 14px;
+  background: linear-gradient(transparent, var(--bg) 30%);
+}
+.result-card { margin: 0 16px 20px; padding: 16px; border-radius: var(--radius); background: #fff; text-align: center; }
+.result-card h3 { margin: 0 0 6px; font-size: 17px; }
+.result-card p { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.result-card--ok { border: 2px solid var(--gold); }
+.result-card--waiting { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.result-card--waiting p { margin: 0; }
+.result-card__actions { display: grid; gap: 8px; }
+.spinner--sm { width: 20px; height: 20px; border-width: 3px; }
+
+/* iOS action sheet */
+.action-sheet { width: 100%; padding: 0 10px 34px; display: grid; gap: 8px; animation: slide-up .3s cubic-bezier(.2,.8,.2,1); }
+.action-sheet__group { background: rgba(250,250,252,.97); border-radius: 14px; overflow: hidden; }
+.action-sheet__title { padding: 14px 16px; text-align: center; border-bottom: .5px solid #d1d1d6; }
+.action-sheet__title strong { display: block; font-size: 13px; color: #6d6d72; }
+.action-sheet__title span { font-size: 13px; color: #8e8e93; }
+.action-sheet__btn {
+  width: 100%; height: 56px; border: none; background: rgba(250,250,252,.97);
+  font: inherit; font-size: 19px; color: #007aff; cursor: pointer;
+}
+.action-sheet__btn--danger { color: #ff3b30; }
+.action-sheet__btn--cancel { border-radius: 14px; font-weight: 600; }
+
 /* ---------- Small screens: phone fills the viewport ---------- */
 @media (max-width: 760px) {
   body { flex-direction: column; gap: 0; padding: 0; align-items: stretch; background: var(--bg); }

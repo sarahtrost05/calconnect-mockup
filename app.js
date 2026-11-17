@@ -61,8 +61,10 @@
     document.getElementById("skip-notice").hidden = !state.skipped;
     screenArea.scrollTop = 0;
 
+    overlayRoot.innerHTML = "";
     if (screen === "onboarding") renderOnboarding();
     else phone.dataset.top = "app";
+    if (screen === "group") renderGroup();
   }
 
   // ---------- Onboarding rendering ----------
@@ -340,6 +342,184 @@
     else go("connect");
   }
 
+  // ---------- Your group ----------
+  const groupRoot = document.getElementById("group-root");
+  const overlayRoot = document.getElementById("overlay-root");
+  const G = DATA.group;
+  const me = G.members.find(m => m.you);
+  let group = freshGroup();
+
+  function freshGroup() {
+    return {
+      statuses: Object.fromEntries(G.members.map(m => [m.id, m.status])),
+      timers: [],
+    };
+  }
+
+  const SMALL_ICONS = {
+    heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8"/>',
+    wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14.5h2"/>',
+    pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+    shield: '<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6z"/><path d="m9 12 2 2 4-4"/>',
+  };
+  const icon = name => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${SMALL_ICONS[name]}</svg>`;
+
+  // How many group members share each of Alex's interests.
+  function sharedInterests(members) {
+    return me.interests
+      .map(interest => ({ interest, count: members.filter(m => m.interests.includes(interest)).length }))
+      .filter(x => x.count > 1)
+      .sort((a, b) => b.count - a.count);
+  }
+
+  function renderGroup() {
+    const s = group.statuses;
+    // Someone who passes simply leaves the list: nobody is ever shown that a person passed.
+    const visible = G.members.filter(m => m.you || s[m.id] !== "declined");
+    const accepted = visible.filter(m => s[m.id] === "accepted").length;
+    const someonePassed = visible.length < G.members.length;
+    const othersPending = G.members.some(m => !m.you && s[m.id] === "pending");
+    const myStatus = s[me.id];
+
+    const members = visible.map(m => {
+      const chip = m.you && myStatus !== "accepted" ? `<span class="status status--you">You</span>`
+        : s[m.id] === "accepted" ? `<span class="status status--in">✓ In</span>`
+        : `<span class="status status--pending">Pending</span>`;
+      const interests = m.interests.map(i =>
+        `<span class="chip ${!m.you && me.interests.includes(i) ? "chip--shared" : ""}">${i}</span>`).join("");
+      return `
+        <li class="member ${m.you && myStatus === "declined" ? "is-out" : ""}">
+          <div class="avatar ${m.you ? "avatar--you" : ""}" style="background:${m.color}" aria-hidden="true">${m.name[0]}</div>
+          <div class="member__body">
+            <div class="member__top">
+              <strong>${m.name}${m.you ? " (you)" : ""}</strong>${chip}
+            </div>
+            <p class="member__meta">${m.major} · ${m.year}</p>
+            <div class="chips">${interests}</div>
+          </div>
+        </li>`;
+    }).join("");
+
+    const shared = sharedInterests(visible).map(x =>
+      `<span class="chip chip--shared">${x.interest} · ${x.count} of you</span>`).join("");
+    const reasons = G.reasons.map(r => `
+      <li>${icon(r.icon)}<div><strong>${r.title}</strong><span>${r.text}</span></div></li>`).join("");
+
+    // Bottom area changes with the state of the group.
+    let footer;
+    if (myStatus === "pending") {
+      footer = `
+        <div class="action-bar">
+          <button class="btn btn--ghost" data-group="decline">Pass</button>
+          <button class="btn btn--primary" data-group="accept">Join this group</button>
+        </div>`;
+    } else if (myStatus === "declined") {
+      footer = `
+        <div class="result-card">
+          <h3>You passed on this group</h3>
+          <p>No one in the group sees that you passed. We'll suggest a new group within 2 days, and you can always keep meeting new people.</p>
+          <button class="btn btn--ghost" data-group="undo">Undo</button>
+        </div>`;
+    } else if (othersPending) {
+      footer = `<div class="result-card result-card--waiting"><div class="spinner spinner--sm"></div><p>You're in! Waiting for the others…</p></div>`;
+    } else {
+      footer = `
+        <div class="result-card result-card--ok">
+          <h3>🎉 Your group is set: ${accepted} of you are in</h3>
+          ${someonePassed ? `<p>${accepted} is plenty to start. We may suggest someone new to join you later.</p>` : ""}
+          <div class="result-card__actions">
+            <a class="btn btn--primary" href="#chat">Say hi in the group chat</a>
+            <a class="btn btn--ghost" href="#activities">Plan a first meetup</a>
+          </div>
+        </div>`;
+    }
+
+    groupRoot.innerHTML = `
+      <header class="app-header">
+        <p class="eyebrow">Fun group · New match</p>
+        <h1>${G.name}</h1>
+        <div class="accept-meter" aria-label="${accepted} of ${visible.length} joined">
+          ${visible.map(m => `<span class="dot dot--${s[m.id]}"></span>`).join("")}
+          <span>${accepted} of ${visible.length} joined</span>
+        </div>
+      </header>
+
+      <ul class="members">${members}</ul>
+
+      <section class="card why">
+        <h2>Why you were matched</h2>
+        <ul class="reasons">
+          <li>${icon("heart")}<div><strong>Shared interests</strong><div class="chips">${shared}</div></div></li>
+          ${reasons}
+        </ul>
+        <p class="why__note">${icon("shield")}Matched on your quiz answers only, never on gender, ethnicity, religion or other personal traits.</p>
+      </section>
+
+      ${footer}`;
+  }
+
+  function finishGroupTimers() {
+    // Leaving mid-animation: jump straight to the final state.
+    if (!group.timers.length) return;
+    group.timers.forEach(clearTimeout);
+    group.timers = [];
+    G.members.forEach(m => {
+      if (!m.you && group.statuses[m.id] === "pending") group.statuses[m.id] = m.willDecline ? "declined" : "accepted";
+    });
+  }
+
+  function acceptGroup() {
+    group.statuses[me.id] = "accepted";
+    renderGroup();
+    // The remaining members answer one by one.
+    const pending = G.members.filter(m => !m.you && group.statuses[m.id] === "pending");
+    pending.forEach((m, i) => {
+      group.timers.push(setTimeout(() => {
+        group.statuses[m.id] = m.willDecline ? "declined" : "accepted";
+        if (i === pending.length - 1) group.timers = [];
+        renderGroup();
+      }, 900 * (i + 1)));
+    });
+  }
+
+  function showDeclineSheet() {
+    overlayRoot.innerHTML = `
+      <div class="sheet-backdrop" data-group="cancel">
+        <div class="action-sheet" role="dialog" aria-label="Pass on this group?">
+          <div class="action-sheet__group">
+            <div class="action-sheet__title">
+              <strong>Pass on this group?</strong>
+              <span>No one in the group will see that you passed. We'll suggest a new group within 2 days.</span>
+            </div>
+            <button class="action-sheet__btn action-sheet__btn--danger" data-group="confirm-decline">Pass on this group</button>
+          </div>
+          <button class="action-sheet__btn action-sheet__btn--cancel" data-group="cancel">Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  function onGroupClick(e) {
+    const el = e.target.closest("[data-group]");
+    if (!el) return;
+    const action = el.dataset.group;
+    if (action === "cancel") {
+      if (el.classList.contains("sheet-backdrop") && e.target !== el) return;
+      overlayRoot.innerHTML = "";
+    }
+    if (action === "accept") acceptGroup();
+    if (action === "decline") showDeclineSheet();
+    if (action === "confirm-decline") {
+      overlayRoot.innerHTML = "";
+      group.statuses[me.id] = "declined";
+      renderGroup();
+    }
+    if (action === "undo") { group.statuses[me.id] = "pending"; renderGroup(); }
+  }
+  groupRoot.addEventListener("click", onGroupClick);
+  overlayRoot.addEventListener("click", onGroupClick);
+
   // ---------- Global ----------
   document.addEventListener("click", e => {
     if (e.target.closest("[data-action='retake']")) {
@@ -350,6 +530,8 @@
   document.getElementById("reset").addEventListener("click", () => {
     clearTimeout(timer);
     Object.assign(state, freshState(), { installing: false });
+    group.timers.forEach(clearTimeout);
+    group = freshGroup();
     if (location.hash === "#onboarding") route(); else location.hash = "#onboarding";
   });
 
@@ -363,6 +545,7 @@
       if (state.step === "matching") state.step = "done";
       state.installing = false;
     }
+    if (currentScreen() !== "group") finishGroupTimers();
     route();
   });
   route();
