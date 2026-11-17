@@ -67,6 +67,7 @@
     else phone.dataset.top = "app";
     if (screen === "group") renderGroup();
     if (screen === "chat") { chatHeader(); renderChat(); }
+    if (screen === "activities") renderActivities();
   }
 
   // ---------- Onboarding rendering ----------
@@ -666,6 +667,222 @@
   chatEls.form.addEventListener("submit", e => { e.preventDefault(); sendMessage(chatEls.input.value); });
   chatEls.chip.addEventListener("click", typeSuggestion);
 
+  // ---------- Activity ideas: vote → booking → everyone approves their share ----------
+  const A = DATA.activities;
+  const actRoot = document.getElementById("activities-root");
+  const ideaById = Object.fromEntries(A.ideas.map(i => [i.id, i]));
+  let act = freshActivities();
+
+  function freshActivities() {
+    return {
+      myVote: null,
+      phase: "vote", // vote | winner | booking | booked
+      // Maya has already approved; the others approve after Alex.
+      approvals: Object.fromEntries(chatMembers.map(m => [m.id, m.id === "maya"])),
+      timers: [],
+    };
+  }
+
+  const money = n => Number.isInteger(n) ? `$${n}` : `$${n.toFixed(2)}`;
+  const money2 = n => `$${n.toFixed(2)}`;
+  const avatarXs = m => `<span class="avatar avatar--xs" style="background:${m.color}" title="${m.name}">${m.name[0]}</span>`;
+
+  function allVotes() {
+    const votes = { ...A.votes };
+    if (act.myVote) votes[me.id] = act.myVote;
+    return votes;
+  }
+
+  function winnerId() {
+    const votes = allVotes();
+    const counts = {};
+    Object.values(votes).forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+    const max = Math.max(...Object.values(counts));
+    const top = Object.keys(counts).filter(id => counts[id] === max);
+    return top.includes(act.myVote) ? act.myVote : top[0]; // ties go to Alex's pick
+  }
+
+  function ideaCard(idea) {
+    const votes = allVotes();
+    const count = Object.values(votes).filter(id => id === idea.id).length; // anonymous: counts only
+    const isMine = act.myVote === idea.id;
+    const isWinner = act.phase === "winner" && winnerId() === idea.id;
+    const dim = act.phase === "winner" && !isWinner;
+
+    const tag = idea.type === "sponsored"
+      ? `<span class="sponsored-label">Sponsored · ${idea.sponsor}</span>`
+      : `<span class="type-tag type-tag--${idea.type}">${idea.label}</span>`;
+
+    return `
+      <article class="idea-card ${idea.type === "sponsored" ? "idea-card--sponsored" : ""} ${isWinner ? "is-winner" : ""} ${dim ? "is-dim" : ""}">
+        ${isWinner ? `<span class="winner-ribbon">Winner</span>` : ""}
+        <div class="idea-card__top">${tag}</div>
+        <h2>${idea.title}</h2>
+        <p class="idea-card__meta">${icon("pin")}${idea.place}</p>
+        <p class="idea-card__meta">${icon("clock")}${idea.when} · ${idea.duration}</p>
+        <div class="price">
+          <span class="price__now">${money(idea.groupPrice)}</span><span class="price__each">each</span>
+          <s class="price__was">${money(idea.listPrice)}</s>
+          <span class="deal-badge">${idea.deal}</span>
+        </div>
+        <p class="idea-card__why"><span class="ai-badge">AI</span>${idea.why}</p>
+        ${idea.type === "sponsored" ? `<p class="idea-card__disclosure">${idea.sponsor} pays to be shown here and funds this discount. It never affects your matches.</p>` : ""}
+        <div class="vote-row">
+          <span class="vote-count">${count} vote${count === 1 ? "" : "s"}</span>
+          ${act.myVote
+            ? (isMine ? `<span class="status status--in">✓ Your vote</span>` : "")
+            : `<button class="btn btn--primary btn--sm vote-btn" data-act="vote" data-id="${idea.id}">Vote</button>`}
+        </div>
+      </article>`;
+  }
+
+  // Shows which group you're voting / booking for.
+  function groupBar() {
+    return `
+      <div class="group-bar">
+        <div class="avatar-stack" aria-hidden="true">${chatMembers.map(avatarXs).join("")}</div>
+        <div class="group-bar__text"><strong>${G.name}</strong><span>Fun group · ${chatMembers.length} members</span></div>
+      </div>`;
+  }
+
+  function renderVote() {
+    const voted = Object.keys(allVotes()).length;
+    const w = act.phase === "winner" ? ideaById[winnerId()] : null;
+    const wVotes = w ? Object.values(allVotes()).filter(id => id === w.id).length : 0;
+
+    actRoot.innerHTML = `
+      <header class="app-header">
+        <h1>Activity ideas</h1>
+        <p class="app-header__sub">Picked by CalConnect AI for your free time and budget.</p>
+      </header>
+      ${groupBar()}
+      <p class="vote-status">${voted < chatMembers.length
+        ? `${voted} of ${chatMembers.length} voted · <strong>your vote decides</strong>`
+        : `All ${chatMembers.length} voted`}</p>
+      <p class="vote-anon">${icon("shield")}Votes are anonymous. Only the totals are shown.</p>
+      ${w ? `
+        <div class="winner-banner">
+          <p>🎉 <strong>${w.title}</strong> wins with ${wVotes} votes</p>
+          <button class="btn btn--gold" data-act="book">Set up the booking</button>
+        </div>` : ""}
+      <div class="idea-list">${A.ideas.map(ideaCard).join("")}</div>`;
+  }
+
+  function renderBooking() {
+    const idea = ideaById[winnerId()];
+    const n = chatMembers.length;
+    const regular = idea.listPrice * n;
+    const total = idea.groupPrice * n;
+    const booked = act.phase === "booked";
+    const approvedCount = chatMembers.filter(m => act.approvals[m.id]).length;
+
+    const rows = chatMembers.map(m => {
+      const ok = act.approvals[m.id];
+      let right;
+      if (m.you && !ok) right = `<button class="btn btn--primary btn--sm" data-act="approve">Approve ${money2(idea.groupPrice)}</button>`;
+      else if (ok) right = `<span class="status status--in">✓ Approved</span>`;
+      else right = `<span class="status status--pending">Waiting…</span>`;
+      return `
+        <li class="approval">
+          <div class="avatar avatar--sm" style="background:${m.color}" aria-hidden="true">${m.name[0]}</div>
+          <div class="approval__who"><strong>${m.name}${m.you ? " (you)" : ""}</strong><span>${money2(idea.groupPrice)} share</span></div>
+          ${right}
+        </li>`;
+    }).join("");
+
+    actRoot.innerHTML = `
+      <header class="app-header">
+        <h1>${booked ? "Booked!" : "Booking"}</h1>
+      </header>
+      ${groupBar()}
+
+      <section class="card booking-summary ${booked ? "is-booked" : ""}">
+        ${idea.type === "sponsored"
+          ? `<span class="sponsored-label">Sponsored · ${idea.sponsor}</span>`
+          : `<span class="type-tag type-tag--${idea.type}">${idea.label}</span>`}
+        <h2>${idea.title}</h2>
+        <p class="idea-card__meta">${icon("pin")}${idea.place}</p>
+        <p class="idea-card__meta">${icon("clock")}${idea.when} · ${idea.duration}</p>
+      </section>
+
+      <section class="card split">
+        <h3>Cost split</h3>
+        <div class="split__row"><span>Regular price (${n} × ${money2(idea.listPrice)})</span><span>${money2(regular)}</span></div>
+        <div class="split__row split__row--deal"><span>Group discount</span><span>−${money2(regular - total)}</span></div>
+        <div class="split__row split__row--total"><span>Total</span><span>${money2(total)}</span></div>
+        <div class="split__each"><span>Each person pays</span><strong>${money2(idea.groupPrice)}</strong></div>
+      </section>
+
+      <section class="card">
+        <div class="approvals__head">
+          <h3>Everyone approves their own share</h3>
+          <span>${approvedCount}/${n}</span>
+        </div>
+        <ul class="approvals">${rows}</ul>
+        <p class="fine-print">${icon("shield")}No one is charged until they approve. You never pay for anyone else.</p>
+      </section>
+
+      <p class="checkin-note">🎟️ The group discount unlocks when 4+ of you check in together at the venue.</p>
+
+      ${booked ? `
+        <div class="result-card result-card--ok">
+          <h3>You're all set for ${idea.when}</h3>
+          <p>All ${n} approved. CalConnect AI posted the details in your group chat.</p>
+          <div class="result-card__actions">
+            <a class="btn btn--primary" href="#chat">Open group chat</a>
+            <a class="btn btn--ghost" href="#rating">Fast-forward to after the meetup</a>
+          </div>
+        </div>` : ""}`;
+  }
+
+  function renderActivities() {
+    if (act.phase === "vote" || act.phase === "winner") renderVote(); else renderBooking();
+  }
+
+  function markBooked() {
+    act.phase = "booked";
+    const idea = ideaById[winnerId()];
+    chat.messages.push({ from: "ai", text: `Booked 🎉 ${idea.title}, ${idea.when} at ${idea.place}. Everyone approved their share (${money2(idea.groupPrice)} each). Remember to check in together to unlock the group discount.` });
+  }
+
+  function approveMine() {
+    act.approvals[me.id] = true;
+    renderActivities();
+    const waiting = chatMembers.filter(m => !act.approvals[m.id]);
+    waiting.forEach((m, i) => {
+      act.timers.push(setTimeout(() => {
+        act.approvals[m.id] = true;
+        if (i === waiting.length - 1) { act.timers = []; markBooked(); }
+        renderActivities();
+      }, 800 * (i + 1)));
+    });
+    if (!waiting.length) { markBooked(); renderActivities(); }
+  }
+
+  function finishActivityTimers() {
+    // Leaving mid-animation: jump to where it was heading.
+    if (!act.timers.length) return;
+    act.timers.forEach(clearTimeout);
+    act.timers = [];
+    if (act.phase === "vote") { act.phase = "winner"; return; }
+    chatMembers.forEach(m => { act.approvals[m.id] = true; });
+    markBooked();
+  }
+
+  actRoot.addEventListener("click", e => {
+    const el = e.target.closest("[data-act]");
+    if (!el) return;
+    const action = el.dataset.act;
+    if (action === "vote") {
+      act.myVote = el.dataset.id;
+      renderActivities();
+      // Short pause so you see your vote land before the winner is shown.
+      act.timers.push(setTimeout(() => { act.timers = []; act.phase = "winner"; renderActivities(); }, 700));
+    }
+    if (action === "book") { act.phase = "booking"; renderActivities(); screenArea.scrollTop = 0; }
+    if (action === "approve") approveMine();
+  });
+
   // ---------- Global ----------
   document.addEventListener("click", e => {
     if (e.target.closest("[data-action='retake']")) {
@@ -680,6 +897,8 @@
     group = freshGroup();
     chat.timers.forEach(clearTimeout);
     chat = freshChat();
+    act.timers.forEach(clearTimeout);
+    act = freshActivities();
     if (location.hash === "#onboarding") route(); else location.hash = "#onboarding";
   });
 
@@ -695,6 +914,7 @@
     }
     if (currentScreen() !== "group") finishGroupTimers();
     if (currentScreen() !== "chat") finishChatTimers();
+    if (currentScreen() !== "activities") finishActivityTimers();
     route();
   });
   route();

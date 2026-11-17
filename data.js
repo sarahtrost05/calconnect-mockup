@@ -117,18 +117,18 @@ window.CC_DATA = {
     suggestedPrompt: "@AI ideas for Saturday?",
     // AI reply to a question about Saturday / ideas / the weekend.
     ideasReply: {
-      text: "Saturday morning works for all 4 of you 🙌 Here are 2 ideas that stay under $10:",
+      text: "Saturday morning works for all 4 of you 🙌 Here are 2 ideas that fit your budget:",
       ideas: [
-        { title: "Hike to Inspiration Point", place: "Tilden Regional Park", when: "Sat 9:30 AM", cost: "Free · carpool $3 each", deal: null },
-        { title: "Farmers' market + brunch", place: "Downtown Berkeley", when: "Sat 10:00 AM", cost: "$9 each", deal: "15% off with 4+" },
+        { title: "Farmers' market + brunch", place: "Downtown Berkeley", when: "Sat 10:00 AM", cost: "$8.50 each", deal: "15% group discount" },
+        { title: "Kayaking on the Bay (Sponsored)", place: "Berkeley Marina", when: "Sat 10:00 AM", cost: "$10 each", deal: "50% off for CalConnect groups" },
       ],
       followUp: "Want me to start a vote?",
     },
     otherReply: "I'm best at hangout ideas, finding a time that works for everyone and splitting costs. Try \"@AI ideas for Saturday?\" 🙂",
     // Group members chiming in after the AI's ideas.
     reactions: [
-      { from: "priya", text: "Tilden sounds amazing 🥾" },
-      { from: "jordan", text: "I'm in for either! Brunch after the hike? 😄" },
+      { from: "priya", text: "Kayaking sounds so fun 🛶" },
+      { from: "jordan", text: "I'm in for either! Let's vote 😄" },
     ],
     // Short replies when Alex writes without @AI.
     smallTalk: [
@@ -136,6 +136,37 @@ window.CC_DATA = {
       { from: "jordan", text: "Same!" },
       { from: "priya", text: "Agreed 🙌" },
     ],
+  },
+
+  // Screen: Activity ideas. Prices are per person and made up.
+  // listPrice = normal price, groupPrice = what each student pays with the group deal.
+  activities: {
+    ideas: [
+      {
+        id: "brunch", type: "social", label: "Social",
+        title: "Farmers' market + brunch",
+        place: "Downtown Berkeley Farmers' Market", when: "Sat 10:00 AM", duration: "~2 hrs",
+        listPrice: 10, groupPrice: 8.5, deal: "15% off when 4+ of you check in",
+        why: "You all like food and cafés, and you're free Saturday morning.",
+      },
+      {
+        id: "demo", type: "pro", label: "Professional",
+        title: "Startup demo night",
+        place: "SoMa, San Francisco (BART from Downtown Berkeley)", when: "Thu 6:30 PM", duration: "~3 hrs",
+        listPrice: 15, groupPrice: 10, deal: "Group ticket for 4+: $10 instead of $15",
+        why: "Jordan and Alex are curious about consulting, Maya about tech. Meet founders together.",
+      },
+      {
+        id: "kayak", type: "sponsored", label: "Sponsored",
+        sponsor: "Bay Paddle Co.", // fictional company
+        title: "Kayaking on the Bay",
+        place: "Berkeley Marina", when: "Sat 10:00 AM", duration: "~2 hrs",
+        listPrice: 20, groupPrice: 10, deal: "50% off for CalConnect groups",
+        why: "Three of you love the outdoors. Gear and a short lesson are included.",
+      },
+    ],
+    // Votes already in when Alex opens the screen: Alex's vote decides.
+    votes: { maya: "kayak", jordan: "demo", priya: "brunch" },
   },
 
   connectOptions: [
