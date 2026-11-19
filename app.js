@@ -541,7 +541,7 @@
   let chat = freshChat();
 
   function freshChat() {
-    return { messages: C.seed.map(m => ({ ...m })), pending: [], typing: null, timers: [], askedIdeas: false, smallTalkIndex: 0, waiting: 0, intentCount: {} };
+    return { messages: C.seed.map(m => ({ ...m })), pending: [], typing: null, timers: [], askedIdeas: false, waiting: 0, ai: CC_AI.newContext() };
   }
 
   const escapeHtml = str => str.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -639,33 +639,22 @@
     if (/@ai\b/i.test(text)) {
       aiRespond(text);
     } else {
-      const reply = C.smallTalk[chat.smallTalkIndex++ % C.smallTalk.length];
-      queueMessage({ ...reply }, 500);
+      // Another student answers, based on what Alex wrote (ai.js).
+      queueMessage(CC_AI.memberReply(text, chat.ai), 500);
     }
   }
 
   // ---------- The AI's answers ----------
   // Live mode: Claude answers, if the presenter saved their own API key (demo nav).
-  // Otherwise (or if the call fails) the offline replies in data.js answer.
+  // Otherwise (or if the call fails) the offline AI in ai.js answers.
   const wait = ms => new Promise(r => setTimeout(r, ms));
-
-  function findIntent(text) {
-    const q = text.replace(/@ai\b/gi, "").trim();
-    return C.aiIntents.find(it => it.match.test(q) && (!it.onlyIfShort || q.split(/\s+/).length <= 4));
-  }
-
-  function offlineReply(intent) {
-    if (!intent) return { text: C.otherReply };
-    if (intent.ideas) return { ...C.ideasReply };
-    const key = C.aiIntents.indexOf(intent);
-    const n = chat.intentCount[key] = (chat.intentCount[key] || 0) + 1;
-    return { text: intent.replies[(n - 1) % intent.replies.length] };
-  }
 
   async function aiRespond(text) {
     const c = chat;
-    const intent = findIntent(text);
-    const isIdeas = !!(intent && intent.ideas);
+    // The offline answer is always worked out: it is the fallback, and it tells
+    // us whether this was an "ideas" question (which shows the ideas card).
+    const offline = CC_AI.reply(text, c.ai, { askedIdeas: c.askedIdeas });
+    const isIdeas = !!offline.ideas;
     c.waiting++;
     renderChat();
     const started = Date.now();
@@ -682,7 +671,7 @@
         liveAI.setStatus("error", err.message);
       }
     }
-    if (!reply) reply = offlineReply(intent);
+    if (!reply) reply = { text: offline.text, ideas: offline.ideas ? C.ideasReply.ideas : undefined, followUp: offline.followUp };
 
     await wait(Math.max(0, 1100 - (Date.now() - started))); // feels like typing
     if (c !== chat) return; // demo was restarted meanwhile
