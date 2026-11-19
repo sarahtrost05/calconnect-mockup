@@ -729,6 +729,50 @@ a { color: var(--blue); }
 .checkin-note { margin: 0 20px 16px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.4; }
 
 /* ---------- Small screens: phone fills the viewport ---------- */
+/* ---------- Mentor ---------- */
+.mentor { padding-bottom: 28px; }
+.mentor .app-header h1 { font-size: 30px; }
+.mentor .card { margin: 12px 16px 0; }
+.mentor-card__label { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.mentor-card__head { display: flex; gap: 14px; align-items: center; }
+.avatar--lg { width: 64px; height: 64px; font-size: 26px; }
+.mentor-card__head h2 { margin: 0; font-size: 22px; }
+.mentor-card__meta { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+.mentor-card__headline { margin: 4px 0 0; font-size: 13px; color: var(--blue); font-weight: 500; }
+.mentor-card__sub { margin: 16px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+.mentor-helps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.mentor-helps li { display: flex; gap: 10px; align-items: center; font-size: 15px; }
+.mentor-helps .ico { width: 20px; height: 20px; color: var(--blue); flex: none; }
+.mentor-why { margin-top: 16px; padding: 12px; border-radius: 12px; background: var(--gold-soft); }
+.mentor-why strong { font-size: 14px; color: var(--blue); }
+.mentor-why p { margin: 4px 0 8px; font-size: 14px; line-height: 1.45; }
+.mentor-why .chip--shared { background: #fff; }
+
+.mentor-actions { display: grid; gap: 8px; margin: 14px 16px 0; text-align: center; }
+.mentor-fine { margin: 2px 8px 0; font-size: 12px; color: var(--muted); line-height: 1.4; }
+.mentor-status { display: flex; gap: 12px; align-items: center; text-align: left; margin: 12px 16px 0; }
+.mentor-status h3 { margin: 0 0 2px; font-size: 16px; }
+.mentor-status p { margin: 0; font-size: 13px; }
+.mentor-status .spinner { flex: none; }
+
+.mentor-accepted { margin: 10px 16px 0; padding: 18px 16px; border-radius: var(--radius); background: var(--blue); color: #fff; text-align: center; animation: pop .35s ease; }
+.mentor-accepted h2 { margin: 10px 0 4px; font-size: 20px; }
+.mentor-accepted p { margin: 0; font-size: 14px; opacity: .85; line-height: 1.4; }
+
+.say-hi h3 { margin: 0 0 6px; font-size: 17px; }
+.say-hi__tip { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+.say-hi textarea {
+  width: 100%; box-sizing: border-box; resize: none; margin-bottom: 10px;
+  padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line);
+  font: inherit; font-size: 15px; line-height: 1.4; color: #000; background: #f9f9fb;
+}
+.say-hi textarea:focus { outline: none; border-color: var(--blue); }
+.mentor-thread { display: grid; gap: 6px; }
+.mentor-thread .msg__col { max-width: 82%; }
+
+.mentor-note { display: flex; gap: 6px; align-items: flex-start; margin: 16px 20px 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.mentor-note .ico { width: 16px; height: 16px; flex: none; color: var(--ok); margin-top: 1px; }
+
 /* ---------- Rating ---------- */
 .screen.rating-sheet.is-active {
   display: flex; align-items: flex-end;

@@ -71,6 +71,7 @@
     if (screen === "chat") { chatHeader(); renderChat(); }
     if (screen === "activities") renderActivities();
     if (screen === "rating") renderRating();
+    if (screen === "mentor") renderMentor();
   }
 
   // ---------- Onboarding rendering ----------
@@ -370,6 +371,9 @@
     pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
     shield: '<path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6z"/><path d="m9 12 2 2 4-4"/>',
     lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
+    people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.6 0 4.5 1.8 4.5 4.5"/>',
+    brief: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
   };
   const icon = name => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${SMALL_ICONS[name]}</svg>`;
 
@@ -1089,6 +1093,178 @@ How to reply:
     renderRating();
   });
 
+  // ---------- Mentor: suggestion → request → mentor accepts → say hi ----------
+  // Separate from the friend group. Both sides opt in: Alex requests, the mentor accepts.
+  const mentorRoot = document.getElementById("mentor-root");
+  let mentor = freshMentor();
+
+  function freshMentor() {
+    // phase: suggest | waiting | accepted | sent (first message sent)
+    return { index: 0, phase: "suggest", hi: "", reply: false, replyTyping: false, timers: [] };
+  }
+
+  const currentMentor = () => DATA.mentors[mentor.index];
+  const mentorHiText = m => DATA.mentorHi.replace("{name}", m.name).replace("{topic}", m.hiTopic);
+
+  function mentorCard(m, compact) {
+    return `
+      <article class="card mentor-card">
+        ${compact ? "" : `<p class="mentor-card__label"><span class="ai-badge">AI</span>Suggested for you</p>`}
+        <div class="mentor-card__head">
+          <div class="avatar avatar--lg" style="background:${m.color}" aria-hidden="true">${m.name[0]}</div>
+          <div>
+            <h2>${m.name}</h2>
+            <p class="mentor-card__meta">${m.major} · ${m.year}</p>
+            <p class="mentor-card__headline">${m.headline}</p>
+          </div>
+        </div>
+        ${compact ? "" : `
+          <h3 class="mentor-card__sub">Can help with</h3>
+          <ul class="mentor-helps">${m.helps.map(h => `<li>${icon(h.icon)}<span>${h.text}</span></li>`).join("")}</ul>
+          <div class="mentor-why">
+            <strong>Why this match</strong>
+            <p>${m.why}</p>
+            <div class="chips">${m.shared.map(s => `<span class="chip chip--shared">${s}</span>`).join("")}</div>
+          </div>`}
+      </article>`;
+  }
+
+  function renderMentor() {
+    const m = currentMentor();
+    let body = "";
+
+    if (mentor.phase === "suggest") {
+      body = `
+        ${mentorCard(m, false)}
+        <div class="mentor-actions">
+          <button class="btn btn--primary" data-mentor="request">Request mentor</button>
+          <button class="btn btn--ghost" data-mentor="next">Show me someone else</button>
+          <p class="mentor-fine">${m.name} only sees your request if you send one. Mentors never see who you skipped.</p>
+        </div>`;
+    }
+
+    if (mentor.phase === "waiting") {
+      body = `
+        ${mentorCard(m, true)}
+        <div class="result-card mentor-status">
+          <div class="spinner spinner--sm" aria-hidden="true"></div>
+          <div>
+            <h3>Waiting for ${m.name} to accept</h3>
+            <p>Mentors usually answer within a day. We'll let you know.</p>
+          </div>
+        </div>
+        <div class="mentor-actions"><button class="btn btn--link" data-mentor="cancel">Cancel request</button></div>`;
+    }
+
+    if (mentor.phase === "accepted" || mentor.phase === "sent") {
+      const thread = mentor.phase === "sent" ? `
+        <div class="mentor-thread">
+          <div class="msg msg--me is-first is-last"><div class="msg__col"><div class="bubble">${escapeHtml(mentor.hi)}</div></div></div>
+          ${mentor.replyTyping ? `<div class="msg msg--them is-first is-last"><div class="msg__avatar">${mentorAvatar(m)}</div><div class="msg__col"><div class="bubble bubble--typing" aria-label="typing"><span></span><span></span><span></span></div></div></div>` : ""}
+          ${mentor.reply ? `<div class="msg msg--them is-first is-last"><div class="msg__avatar">${mentorAvatar(m)}</div><div class="msg__col"><div class="msg__sender">${m.name}</div><div class="bubble">${escapeHtml(DATA.mentorReply)}</div></div></div>` : ""}
+        </div>` : "";
+
+      body = `
+        <div class="mentor-accepted">
+          <span class="status status--in">✓ Your mentor</span>
+          <h2>${m.name} accepted! 🎉</h2>
+          <p>You're paired. ${m.name} can help with classes, clubs and internships.</p>
+        </div>
+        ${mentorCard(m, true)}
+        <section class="card say-hi">
+          <h3>${mentor.phase === "sent" ? `Chat with ${m.name}` : "Say hi"}</h3>
+          ${mentor.phase === "accepted" ? `
+            <p class="say-hi__tip">Introduce yourself and suggest a time. Here's a draft you can edit:</p>
+            <form id="mentor-hi">
+              <textarea id="mentor-hi-text" rows="4" aria-label="Message to ${m.name}">${escapeHtml(mentorHiText(m))}</textarea>
+              <button type="submit" class="btn btn--primary">Send to ${m.name}</button>
+            </form>` : thread}
+        </section>
+        <div class="mentor-actions"><button class="btn btn--link" data-mentor="end">End pairing</button></div>`;
+    }
+
+    mentorRoot.innerHTML = `
+      <header class="app-header">
+        <h1>Mentor</h1>
+        <p class="app-header__sub">A senior in your field for classes, clubs and internships. Separate from your friend group.</p>
+      </header>
+      ${body}
+      <p class="mentor-note">${icon("shield")}Mentors are volunteers. Either of you can end the pairing anytime, no reason needed.</p>`;
+  }
+
+  function mentorAvatar(m) {
+    return `<div class="avatar avatar--sm" style="background:${m.color}" aria-hidden="true">${m.name[0]}</div>`;
+  }
+
+  function requestMentor() {
+    mentor.phase = "waiting";
+    renderMentor();
+    // Demo: the mentor accepts after a moment.
+    mentor.timers.push(setTimeout(() => { mentor.timers = []; mentor.phase = "accepted"; renderMentor(); }, 2500));
+  }
+
+  function sendHi(text) {
+    mentor.hi = text.trim() || mentorHiText(currentMentor());
+    mentor.phase = "sent";
+    renderMentor();
+    mentor.timers.push(setTimeout(() => { mentor.replyTyping = true; renderMentor(); }, 1000));
+    mentor.timers.push(setTimeout(() => { mentor.timers = []; mentor.replyTyping = false; mentor.reply = true; renderMentor(); }, 2600));
+  }
+
+  function finishMentorTimers() {
+    // Leaving mid-animation: jump to where it was heading.
+    if (!mentor.timers.length) return;
+    mentor.timers.forEach(clearTimeout);
+    mentor.timers = [];
+    if (mentor.phase === "waiting") mentor.phase = "accepted";
+    if (mentor.phase === "sent") { mentor.replyTyping = false; mentor.reply = true; }
+  }
+
+  function showEndSheet() {
+    const m = currentMentor();
+    overlayRoot.innerHTML = `
+      <div class="sheet-backdrop" data-mentor="sheet-cancel">
+        <div class="action-sheet" role="dialog" aria-label="End pairing with ${m.name}?">
+          <div class="action-sheet__group">
+            <div class="action-sheet__title">
+              <strong>End pairing with ${m.name}?</strong>
+              <span>${m.name} will only see that the pairing ended, with no reason. You can get a new suggestion anytime.</span>
+            </div>
+            <button class="action-sheet__btn action-sheet__btn--danger" data-mentor="confirm-end">End pairing</button>
+          </div>
+          <button class="action-sheet__btn action-sheet__btn--cancel" data-mentor="sheet-cancel">Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  function onMentorClick(e) {
+    const el = e.target.closest("[data-mentor]");
+    if (!el) return;
+    const action = el.dataset.mentor;
+    if (action === "request") requestMentor();
+    if (action === "next") { mentor.index = (mentor.index + 1) % DATA.mentors.length; renderMentor(); screenArea.scrollTop = 0; }
+    if (action === "cancel") { mentor.timers.forEach(clearTimeout); mentor.timers = []; mentor.phase = "suggest"; renderMentor(); }
+    if (action === "end") showEndSheet();
+    if (action === "sheet-cancel") {
+      if (el.classList.contains("sheet-backdrop") && e.target !== el) return;
+      overlayRoot.innerHTML = "";
+    }
+    if (action === "confirm-end") {
+      overlayRoot.innerHTML = "";
+      mentor.timers.forEach(clearTimeout);
+      mentor = { ...freshMentor(), index: (mentor.index + 1) % DATA.mentors.length };
+      renderMentor();
+      screenArea.scrollTop = 0;
+    }
+  }
+  mentorRoot.addEventListener("click", onMentorClick);
+  overlayRoot.addEventListener("click", onMentorClick);
+  mentorRoot.addEventListener("submit", e => {
+    if (e.target.id !== "mentor-hi") return;
+    e.preventDefault();
+    sendHi(document.getElementById("mentor-hi-text").value);
+  });
+
   // ---------- Live AI settings (demo nav, outside the phone) ----------
   // The presenter's own Anthropic API key, kept only in this browser's localStorage.
   const liveAI = (() => {
@@ -1151,6 +1327,8 @@ How to reply:
     act.timers.forEach(clearTimeout);
     act = freshActivities();
     rate = freshRating();
+    mentor.timers.forEach(clearTimeout);
+    mentor = freshMentor();
     clearTimeout(rateTimer);
     document.querySelector(".status-bar__time").textContent = "9:41";
     if (location.hash === "#onboarding") route(); else location.hash = "#onboarding";
@@ -1170,6 +1348,7 @@ How to reply:
     if (currentScreen() !== "chat") finishChatTimers();
     if (currentScreen() !== "activities") finishActivityTimers();
     if (currentScreen() !== "home") { clearTimeout(rateTimer); rateTimer = null; }
+    if (currentScreen() !== "mentor") finishMentorTimers();
     route();
   });
   route();
