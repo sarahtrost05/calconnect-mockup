@@ -332,6 +332,46 @@ window.CC_DATA = {
     votes: { maya: "kayak", jordan: "demo", priya: "brunch" },
   },
 
+  // Screen: Mentor. Fake senior students, suggested one at a time. The people are
+  // made up; the companies are real but only appear as text (no logos).
+  // Matched only on major and career interests. "shared" is highlighted on the card.
+  mentors: [
+    { id: "nadia", name: "Nadia", major: "Business (Haas)", year: "4th year", color: "#8e3b8a",
+      headline: "Summer Business Analyst intern at McKinsey & Company, San Francisco",
+      hiTopic: "classes and recruiting for consulting",
+      helps: [
+        { icon: "book", text: "Picking Haas classes and professors" },
+        { icon: "people", text: "Joining a consulting club" },
+        { icon: "brief", text: "Case interview prep from the McKinsey recruiting process" },
+      ],
+      why: "You're both Business majors interested in consulting, and Nadia went through consulting recruiting last year.",
+      shared: ["Business (Haas)", "Consulting"] },
+    { id: "marcus", name: "Marcus", major: "Economics", year: "4th year", color: "#2f6f4f",
+      headline: "Summer Analyst intern at J.P. Morgan, Investment Banking, San Francisco",
+      hiTopic: "econ classes and getting a finance internship",
+      helps: [
+        { icon: "book", text: "Econ and stats classes" },
+        { icon: "people", text: "Finance and investing clubs" },
+        { icon: "brief", text: "Resumes and banking internship applications" },
+      ],
+      why: "You're both curious about consulting and finance. Marcus took the same intro Business classes you're in now.",
+      shared: ["Consulting", "Finance"] },
+    { id: "elena", name: "Elena", major: "Business (Haas)", year: "4th year", color: "#b5542b",
+      headline: "Product Management intern at Stripe, now building a startup at Berkeley SkyDeck",
+      hiTopic: "balancing classes with side projects and finding a first internship",
+      helps: [
+        { icon: "book", text: "Balancing classes and side projects" },
+        { icon: "people", text: "Entrepreneurship clubs on campus" },
+        { icon: "brief", text: "Finding a first internship" },
+      ],
+      why: "You're both Business majors. Elena also started out unsure between consulting and startups.",
+      shared: ["Business (Haas)", "Startups"] },
+  ],
+  // Prefilled first message after a mentor accepts. {name} = mentor's name.
+  mentorHi: "Hi {name}! I'm Alex, a first-year in Business. I'd love your advice on {topic}. Would you be up for coffee at Strada sometime this week?",
+  // The mentor's demo reply to the first message.
+  mentorReply: "Hi Alex, happy to help! Thursday at 4 PM at Strada works for me. Bring any questions you have ☕",
+
   connectOptions: [
     { id: "fun", icon: "🎉", title: "Fun group", desc: "4–5 students for hangouts. You can join professional events together too.", default: true },
     { id: "pro", icon: "💼", title: "Professional circle", desc: "A networking chat of ~8 students with similar career interests.", default: false },

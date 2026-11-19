@@ -28,7 +28,7 @@ Discounts are the main reason to open the app, and they reward meeting in person
 3. **Your group**: 4–5 matched students (or the professional circle), plus "why you were matched".
 4. **Group chat**: the AI posts the intro and answers `@AI` requests. Every AI message is clearly labeled as AI.
 5. **Activity ideas**: 2–3 suggestions with the group discount shown, a group vote, and booking with a cost split that each student approves. Sponsored items are labeled.
-6. **Mentor**: the mentor's profile, why you were matched, and a "request a coffee chat" button.
+6. **Mentor**: the AI suggests a senior mentor in the student's field (same major or career interest), shows why they were matched, and both sides opt in. The mentor helps with classes, clubs and internships. It's separate from the friend group.
 7. **Rating**: one-tap rating after a meetup, plus a private "would meet again?" question.
 
 ## Design principles
